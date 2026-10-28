@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
+import { DeleteClientButton } from "@/components/DeleteClientButton";
 import { ProgramDays, RecentWorkouts, WeightCard, WeightForm } from "@/components/overview";
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
@@ -119,6 +120,9 @@ export default async function ClientPage({
               <input name="password" type="text" minLength={10} autoComplete="new-password" placeholder={canLogin ? "Leeg laten om niet te wijzigen" : "Minstens 10 tekens; dan kan de cliënt zelf inloggen"} />
             </label>
           </ActionForm>
+          <div className="danger-zone">
+            <DeleteClientButton clientId={client.id} name={client.name} withLabel />
+          </div>
         </section>
       </div>
     </>

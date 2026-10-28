@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { DeleteClientButton } from "@/components/DeleteClientButton";
 import { requireUser } from "@/lib/auth";
 import { getClients } from "@/lib/data";
 import { daysAgo, kg, shortDate } from "@/lib/format";
 
 export const metadata = { title: "Cliënten" };
 
-export default async function TrainerHome() {
+export default async function TrainerHome({ searchParams }: { searchParams: { deleted?: string } }) {
   const me = await requireUser("trainer");
   const clients = await getClients(me.id);
   const stale = daysAgo(10);
@@ -20,6 +21,10 @@ export default async function TrainerHome() {
         </div>
         <Link href="/trainer/clients/new" className="btn btn-primary">Cliënt toevoegen</Link>
       </div>
+
+      {searchParams.deleted && (
+        <p className="notice" role="status">{searchParams.deleted.slice(0, 100)} is verwijderd, met alle bijbehorende gegevens.</p>
+      )}
 
       <div className="grid grid-3">
         <div className="stat"><span className="label">Cliënten</span><span className="metric">{clients.length}</span></div>
@@ -39,7 +44,7 @@ export default async function TrainerHome() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Naam</th><th>Schema</th><th>Laatste training</th><th>7 dagen</th><th>Gewicht</th></tr>
+                <tr><th>Naam</th><th>Schema</th><th>Laatste training</th><th>7 dagen</th><th>Gewicht</th><th aria-label="Verwijderen" /></tr>
               </thead>
               <tbody>
                 {clients.map((c) => (
@@ -56,6 +61,7 @@ export default async function TrainerHome() {
                     </td>
                     <td>{c.workoutsThisWeek}</td>
                     <td>{c.weight ? `${kg(c.weight.weightKg)} kg` : <span className="muted">–</span>}</td>
+                    <td style={{ textAlign: "right" }}><DeleteClientButton clientId={c.id} name={c.name} /></td>
                   </tr>
                 ))}
               </tbody>

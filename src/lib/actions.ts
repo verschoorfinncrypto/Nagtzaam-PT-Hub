@@ -200,6 +200,15 @@ export async function createClient(_: FormResult, form: FormData): Promise<FormR
   redirect(`/trainer/clients/${c.id}?created=${d.password ? "login" : "nologin"}`);
 }
 
+/** Cliënt definitief verwijderen, met al zijn trainingen, schema's en metingen (cascade in de database). */
+export async function deleteClient(form: FormData) {
+  const trainer = await requireUser("trainer");
+  const { client } = await requireClientAccess(Number(form.get("clientId")));
+  await db.delete(users).where(and(eq(users.id, client.id), eq(users.role, "client"), eq(users.trainerId, trainer.id)));
+  revalidatePath("/", "layout");
+  redirect(`/trainer?deleted=${encodeURIComponent(client.name)}`);
+}
+
 /** Trainer bekijkt en gebruikt de hub als deze cliënt (om te testen of samen in te vullen). */
 export async function viewAsClient(form: FormData) {
   const trainer = await requireUser("trainer");

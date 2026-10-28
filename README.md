@@ -9,6 +9,7 @@ Webapp waarin trainers en cliënten trainingen, lichaamsgewicht, schema's en PR'
 - **Bekijk als cliënt**: een trainer kan de hub gebruiken zoals een eigen cliënt hem ziet (om te testen of samen in te vullen), met een balk bovenin om terug te gaan.
 - **Schema's** (`/trainer/schemas`): overzicht van alle actieve schema's per cliënt en een schemabouwer met cliëntkeuze. Alle oefeningen uit de database zijn te kiezen; ontbreekt er een, dan voeg je hem direct toe. Per oefening schrijft de trainer sets, reps, RPE en rust voor; de belasting is optioneel: leeg = de cliënt kiest het gewicht tijdens het trainen, ingevuld (bijv. `40 kg`) = wordt in de logger vooraf ingevuld.
 - **Data** (`/trainer/data`, voor alle trainers): overzicht van de hele praktijk: aantal en groei van cliënten, aandeel vanuit fysio (herkomst per cliënt), actieve cliënten, behoud na 4 weken, trainingen per week, PR's, gewicht bijhouden, cijfers per trainer, meest getrainde oefeningen en wie aandacht nodig heeft.
+- **Cliënten verwijderen** met het prullenbakje in de cliëntenlijst of op de cliëntpagina, na bevestiging. Definitief: trainingen, schema's en metingen van die cliënt worden mee verwijderd.
 - Een trainer ziet alleen de eigen cliënten; een cliënt alleen zichzelf.
 
 Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessies via een ondertekende cookie (jose), wachtwoorden met bcrypt. Styling volgt het design system *Nagtzaam PT Hub*.

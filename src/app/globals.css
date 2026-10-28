@@ -235,3 +235,11 @@ details.cue p { margin-top: 4px; max-width: 60ch; }
 .quick-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; padding: 8px 10px; background: var(--brand-tint); border-radius: var(--radius-sm); }
 .quick-add select { width: auto; }
 table.builder td { padding-right: 8px; }
+
+/* Verwijderen */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid transparent; background: none; color: var(--ink-muted); cursor: pointer; }
+.icon-btn:hover { color: var(--alert); border-color: var(--alert); background: #f8e8e0; }
+.btn-danger-solid { background: var(--alert); border-color: var(--alert); color: #fff; }
+.btn-danger-solid:hover { background: #9c370b; }
+.delete-confirm { display: grid; gap: 8px; justify-items: end; text-align: right; max-width: 320px; margin-left: auto; padding: 10px 12px; border: 1px solid var(--alert); border-radius: var(--radius-sm); background: #fdf4ef; }
+.danger-zone { border-top: 1px solid var(--line); padding-top: var(--space-4); display: flex; justify-content: flex-end; }
