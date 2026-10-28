@@ -1,0 +1,264 @@
+import "server-only";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import {
+  bodyWeights,
+  db,
+  exercises,
+  programDays,
+  programExercises,
+  programs,
+  users,
+  workouts,
+  workoutSets,
+} from "@/db";
+import { daysAgo, e1rm, weekStart } from "./format";
+
+export async function getExercises() {
+  return db.select().from(exercises).orderBy(asc(exercises.category), asc(exercises.name));
+}
+
+export type ProgramWithDays = NonNullable<Awaited<ReturnType<typeof getActiveProgram>>>;
+
+export async function getActiveProgram(clientId: number) {
+  const [p] = await db
+    .select()
+    .from(programs)
+    .where(and(eq(programs.clientId, clientId), eq(programs.active, true)))
+    .orderBy(desc(programs.createdAt))
+    .limit(1);
+  if (!p) return null;
+  const days = await db.select().from(programDays).where(eq(programDays.programId, p.id)).orderBy(asc(programDays.position));
+  const items = days.length
+    ? await db
+        .select({
+          id: programExercises.id,
+          dayId: programExercises.dayId,
+          exerciseId: programExercises.exerciseId,
+          exerciseName: exercises.name,
+          position: programExercises.position,
+          sets: programExercises.sets,
+          reps: programExercises.reps,
+          load: programExercises.load,
+          notes: programExercises.notes,
+        })
+        .from(programExercises)
+        .innerJoin(exercises, eq(exercises.id, programExercises.exerciseId))
+        .where(inArray(programExercises.dayId, days.map((d) => d.id)))
+        .orderBy(asc(programExercises.position))
+    : [];
+  return { ...p, days: days.map((d) => ({ ...d, items: items.filter((i) => i.dayId === d.id) })) };
+}
+
+export async function getWorkouts(clientId: number, limit = 50) {
+  const rows = await db
+    .select({
+      id: workouts.id,
+      date: workouts.date,
+      title: workouts.title,
+      rpe: workouts.rpe,
+      sets: sql<number>`count(${workoutSets.id})::int`,
+      volume: sql<number>`coalesce(sum(${workoutSets.reps} * ${workoutSets.weight}), 0)::float`,
+    })
+    .from(workouts)
+    .leftJoin(workoutSets, eq(workoutSets.workoutId, workouts.id))
+    .where(eq(workouts.clientId, clientId))
+    .groupBy(workouts.id)
+    .orderBy(desc(workouts.date), desc(workouts.id))
+    .limit(limit);
+  return rows;
+}
+
+export async function getWorkout(id: number) {
+  const [w] = await db.select().from(workouts).where(eq(workouts.id, id)).limit(1);
+  if (!w) return null;
+  const sets = await db
+    .select({
+      id: workoutSets.id,
+      exerciseId: workoutSets.exerciseId,
+      exerciseName: exercises.name,
+      position: workoutSets.position,
+      setNumber: workoutSets.setNumber,
+      reps: workoutSets.reps,
+      weight: workoutSets.weight,
+    })
+    .from(workoutSets)
+    .innerJoin(exercises, eq(exercises.id, workoutSets.exerciseId))
+    .where(eq(workoutSets.workoutId, id))
+    .orderBy(asc(workoutSets.position), asc(workoutSets.setNumber));
+  const groups: { exerciseId: number; exerciseName: string; sets: typeof sets }[] = [];
+  for (const s of sets) {
+    const last = groups[groups.length - 1];
+    if (last && last.exerciseId === s.exerciseId && last.sets[0].position === s.position) last.sets.push(s);
+    else groups.push({ exerciseId: s.exerciseId, exerciseName: s.exerciseName, sets: [s] });
+  }
+  return { ...w, groups };
+}
+
+export async function getBodyWeights(clientId: number, sinceDays = 365) {
+  return db
+    .select()
+    .from(bodyWeights)
+    .where(and(eq(bodyWeights.clientId, clientId), gte(bodyWeights.date, daysAgo(sinceDays))))
+    .orderBy(asc(bodyWeights.date));
+}
+
+export type PR = {
+  exerciseId: number;
+  exerciseName: string;
+  bestE1rm: number;
+  bestSet: { weight: number; reps: number; date: string };
+  heaviest: { weight: number; reps: number; date: string };
+  recent: boolean;
+};
+
+/** Persoonlijke records per oefening: hoogste geschatte 1RM en zwaarste set. */
+export async function getPRs(clientId: number): Promise<PR[]> {
+  const rows = await db
+    .select({
+      exerciseId: workoutSets.exerciseId,
+      exerciseName: exercises.name,
+      weight: workoutSets.weight,
+      reps: workoutSets.reps,
+      date: workouts.date,
+    })
+    .from(workoutSets)
+    .innerJoin(workouts, eq(workouts.id, workoutSets.workoutId))
+    .innerJoin(exercises, eq(exercises.id, workoutSets.exerciseId))
+    .where(and(eq(workouts.clientId, clientId), sql`${workoutSets.weight} > 0`));
+
+  const recentFrom = daysAgo(14);
+  const map = new Map<number, PR>();
+  for (const r of rows) {
+    const est = e1rm(r.weight, r.reps);
+    const cur = map.get(r.exerciseId);
+    if (!cur) {
+      map.set(r.exerciseId, {
+        exerciseId: r.exerciseId,
+        exerciseName: r.exerciseName,
+        bestE1rm: est,
+        bestSet: { weight: r.weight, reps: r.reps, date: r.date },
+        heaviest: { weight: r.weight, reps: r.reps, date: r.date },
+        recent: false,
+      });
+      continue;
+    }
+    if (est > cur.bestE1rm || (est === cur.bestE1rm && r.date < cur.bestSet.date)) {
+      cur.bestE1rm = est;
+      cur.bestSet = { weight: r.weight, reps: r.reps, date: r.date };
+    }
+    if (r.weight > cur.heaviest.weight || (r.weight === cur.heaviest.weight && r.reps > cur.heaviest.reps)) {
+      cur.heaviest = { weight: r.weight, reps: r.reps, date: r.date };
+    }
+  }
+  const list = [...map.values()];
+  for (const p of list) p.recent = p.bestSet.date >= recentFrom;
+  return list.sort((a, b) => b.bestE1rm - a.bestE1rm);
+}
+
+/** Verloop van de geschatte 1RM voor één oefening (beste per training). */
+export async function getE1rmHistory(clientId: number, exerciseId: number) {
+  const rows = await db
+    .select({ date: workouts.date, weight: workoutSets.weight, reps: workoutSets.reps })
+    .from(workoutSets)
+    .innerJoin(workouts, eq(workouts.id, workoutSets.workoutId))
+    .where(and(eq(workouts.clientId, clientId), eq(workoutSets.exerciseId, exerciseId)))
+    .orderBy(asc(workouts.date));
+  const best = new Map<string, number>();
+  for (const r of rows) best.set(r.date, Math.max(best.get(r.date) ?? 0, e1rm(r.weight, r.reps)));
+  return [...best.entries()].map(([date, value]) => ({ date, value }));
+}
+
+/** Trainingen en volume (kg × reps) per week, oudste eerst. */
+export async function getWeekly(clientId: number, weeks = 8) {
+  const from = weekStart(daysAgo((weeks - 1) * 7));
+  const rows = await db
+    .select({
+      id: workouts.id,
+      date: workouts.date,
+      volume: sql<number>`coalesce(sum(${workoutSets.reps} * ${workoutSets.weight}), 0)::float`,
+    })
+    .from(workouts)
+    .leftJoin(workoutSets, eq(workoutSets.workoutId, workouts.id))
+    .where(and(eq(workouts.clientId, clientId), gte(workouts.date, from)))
+    .groupBy(workouts.id);
+  const out: { week: string; sessions: number; volume: number }[] = [];
+  const start = new Date(from + "T12:00:00");
+  for (let i = 0; i < weeks; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i * 7);
+    out.push({ week: d.toISOString().slice(0, 10), sessions: 0, volume: 0 });
+  }
+  for (const r of rows) {
+    const bucket = out.find((b) => b.week === weekStart(r.date));
+    if (bucket) {
+      bucket.sessions += 1;
+      bucket.volume += r.volume;
+    }
+  }
+  return out;
+}
+
+/** Per oefening de sets van de meest recente training waarin die oefening zat. */
+export async function getLastSets(clientId: number) {
+  const rows = await db
+    .select({
+      exerciseId: workoutSets.exerciseId,
+      workoutId: workouts.id,
+      date: workouts.date,
+      reps: workoutSets.reps,
+      weight: workoutSets.weight,
+      setNumber: workoutSets.setNumber,
+    })
+    .from(workoutSets)
+    .innerJoin(workouts, eq(workouts.id, workoutSets.workoutId))
+    .where(eq(workouts.clientId, clientId))
+    .orderBy(desc(workouts.date), desc(workouts.id), asc(workoutSets.setNumber));
+  const out: Record<number, { date: string; sets: { reps: number; weight: number }[] }> = {};
+  const seenWorkout: Record<number, number> = {};
+  for (const r of rows) {
+    if (seenWorkout[r.exerciseId] === undefined) seenWorkout[r.exerciseId] = r.workoutId;
+    if (seenWorkout[r.exerciseId] !== r.workoutId) continue;
+    (out[r.exerciseId] ??= { date: r.date, sets: [] }).sets.push({ reps: r.reps, weight: r.weight });
+  }
+  return out;
+}
+
+export async function getClients(trainerId: number) {
+  const clients = await db
+    .select({ id: users.id, name: users.name, email: users.email, goal: users.goal, createdAt: users.createdAt })
+    .from(users)
+    .where(and(eq(users.trainerId, trainerId), eq(users.role, "client")))
+    .orderBy(asc(users.name));
+  if (!clients.length) return [];
+  const ids = clients.map((c) => c.id);
+  const weekFrom = daysAgo(6);
+  const lastWorkouts = await db
+    .select({
+      clientId: workouts.clientId,
+      last: sql<string | null>`max(${workouts.date})::text`,
+      week: sql<number>`count(*) filter (where ${workouts.date} >= ${weekFrom})::int`,
+    })
+    .from(workouts)
+    .where(inArray(workouts.clientId, ids))
+    .groupBy(workouts.clientId);
+  const weights = await db
+    .selectDistinctOn([bodyWeights.clientId], {
+      clientId: bodyWeights.clientId,
+      weightKg: bodyWeights.weightKg,
+      date: bodyWeights.date,
+    })
+    .from(bodyWeights)
+    .where(inArray(bodyWeights.clientId, ids))
+    .orderBy(bodyWeights.clientId, desc(bodyWeights.date));
+  const active = await db
+    .select({ clientId: programs.clientId, name: programs.name })
+    .from(programs)
+    .where(and(inArray(programs.clientId, ids), eq(programs.active, true)));
+  return clients.map((c) => ({
+    ...c,
+    lastWorkout: lastWorkouts.find((w) => w.clientId === c.id)?.last ?? null,
+    workoutsThisWeek: lastWorkouts.find((w) => w.clientId === c.id)?.week ?? 0,
+    weight: weights.find((w) => w.clientId === c.id) ?? null,
+    program: active.find((p) => p.clientId === c.id)?.name ?? null,
+  }));
+}
