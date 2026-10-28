@@ -185,7 +185,7 @@ export function ProgramDays({
           </div>
           <table>
             <thead>
-              <tr><th>Oefening</th><th>Sets × reps</th><th>Belasting</th></tr>
+              <tr><th>Oefening</th><th>Sets × reps</th><th>RPE</th><th>Rust</th><th>Belasting</th></tr>
             </thead>
             <tbody>
               {d.items.map((it) => (
@@ -200,8 +200,10 @@ export function ProgramDays({
                       </details>
                     )}
                   </td>
-                  <td>{it.sets} × {it.reps}</td>
-                  <td>{it.load || <span className="muted">–</span>}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{it.sets} × {it.reps}</td>
+                  <td>{it.rpe || <span className="muted">–</span>}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{it.rest || <span className="muted">–</span>}</td>
+                  <td>{it.load || <span className="muted">zelf kiezen</span>}</td>
                 </tr>
               ))}
             </tbody>

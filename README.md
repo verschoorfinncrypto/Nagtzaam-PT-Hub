@@ -7,6 +7,7 @@ Webapp waarin trainers en cliënten trainingen, lichaamsgewicht, schema's en PR'
 - **Oefenbibliotheek** met 265 oefeningen voor revalidatie en spieropbouw, elk met regio, materiaal, doel, niveau, spiergroepen en een korte uitvoeringsinstructie. Doorzoekbaar en filterbaar op `/exercises`; trainers kunnen eigen oefeningen toevoegen. In schema's en de logger kies je een oefening door te typen.
 - **Cliënten zonder login**: e-mail en wachtwoord zijn optioneel bij het aanmaken. Zo'n cliënt beheert de trainer zelf; later kan op de cliëntpagina alsnog een e-mail en wachtwoord worden ingesteld.
 - **Bekijk als cliënt**: een trainer kan de hub gebruiken zoals een eigen cliënt hem ziet (om te testen of samen in te vullen), met een balk bovenin om terug te gaan.
+- **Schema's** (`/trainer/schemas`): overzicht van alle actieve schema's per cliënt en een schemabouwer met cliëntkeuze. Alle oefeningen uit de database zijn te kiezen; ontbreekt er een, dan voeg je hem direct toe. Per oefening schrijft de trainer sets, reps, RPE en rust voor; de belasting is optioneel: leeg = de cliënt kiest het gewicht tijdens het trainen, ingevuld (bijv. `40 kg`) = wordt in de logger vooraf ingevuld.
 - **Data** (`/trainer/data`, voor alle trainers): overzicht van de hele praktijk: aantal en groei van cliënten, aandeel vanuit fysio (herkomst per cliënt), actieve cliënten, behoud na 4 weken, trainingen per week, PR's, gewicht bijhouden, cijfers per trainer, meest getrainde oefeningen en wie aandacht nodig heeft.
 - Een trainer ziet alleen de eigen cliënten; een cliënt alleen zichzelf.
 

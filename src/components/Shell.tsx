@@ -15,6 +15,7 @@ const CLIENT_NAV = [
 
 const TRAINER_NAV = [
   { href: "/trainer", label: "Cliënten" },
+  { href: "/trainer/schemas", label: "Schema's" },
   { href: "/trainer/data", label: "Data" },
   { href: "/exercises", label: "Oefeningen" },
   { href: "/trainer/team", label: "Team" },

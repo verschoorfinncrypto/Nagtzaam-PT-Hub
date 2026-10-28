@@ -88,6 +88,8 @@ export async function getActiveProgram(clientId: number) {
           position: programExercises.position,
           sets: programExercises.sets,
           reps: programExercises.reps,
+          rpe: programExercises.rpe,
+          rest: programExercises.rest,
           load: programExercises.load,
           notes: programExercises.notes,
         })
@@ -318,4 +320,26 @@ export async function getClients(trainerId: number) {
     weight: weights.find((w) => w.clientId === c.id) ?? null,
     program: active.find((p) => p.clientId === c.id)?.name ?? null,
   }));
+}
+
+/** Cliënten van deze trainer met hun actieve schema (of null), voor het tabblad Schema's. */
+export async function getTrainerPrograms(trainerId: number) {
+  const r = await db.execute(sql`
+    select u.id as client_id, u.name as client_name,
+           p.id as program_id, p.name as program_name, (p.created_at at time zone 'Europe/Amsterdam')::date::text as created,
+           (select count(*) from program_days d where d.program_id = p.id)::int as days,
+           (select count(*) from program_exercises e join program_days d on d.id = e.day_id where d.program_id = p.id)::int as exercises
+    from users u
+    left join programs p on p.client_id = u.id and p.active
+    where u.role = 'client' and u.trainer_id = ${trainerId}
+    order by (p.id is null), u.name`);
+  return r.rows as {
+    client_id: number;
+    client_name: string;
+    program_id: number | null;
+    program_name: string | null;
+    created: string | null;
+    days: number;
+    exercises: number;
+  }[];
 }

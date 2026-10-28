@@ -34,6 +34,7 @@ export function ExercisePicker({
   onChange,
   ariaLabel,
   compact,
+  onUnmatched,
 }: {
   listId: string;
   exercises: PickerExercise[];
@@ -41,6 +42,8 @@ export function ExercisePicker({
   onChange: (id: number | "") => void;
   ariaLabel: string;
   compact?: boolean;
+  /** Krijgt de getypte tekst als die (nog) geen bestaande oefening is, anders "". */
+  onUnmatched?: (text: string) => void;
 }) {
   const nameOf = (id: number | "") => (id === "" ? "" : exercises.find((e) => e.id === id)?.name ?? "");
   const [text, setText] = useState(nameOf(value));
@@ -67,6 +70,7 @@ export function ExercisePicker({
         setText(e.target.value);
         const m = match(e.target.value);
         onChange(m ? m.id : "");
+        onUnmatched?.(m ? "" : e.target.value.trim());
       }}
       onBlur={() => {
         const m = match(text);

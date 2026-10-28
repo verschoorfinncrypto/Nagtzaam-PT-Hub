@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -265,7 +265,7 @@ export async function addTrainer(_: FormResult, form: FormData): Promise<FormRes
 /* ---------- Schema's (trainer) ---------- */
 
 const programSchema = z.object({
-  clientId: z.coerce.number().int().positive(),
+  clientId: z.coerce.number().int().positive("Kies eerst een cliënt"),
   name: z.string().trim().min(1, "Geef het schema een naam").max(120),
   notes: z.string().trim().max(2000).optional(),
   days: z
@@ -277,7 +277,9 @@ const programSchema = z.object({
             z.object({
               exerciseId: z.number().int().positive(),
               sets: z.number().int().min(1).max(20),
-              reps: z.string().trim().min(1).max(20),
+              reps: z.string().trim().min(1, "Vul bij elke oefening de reps in").max(20),
+              rpe: z.string().trim().max(10).optional(),
+              rest: z.string().trim().max(20).optional(),
               load: z.string().trim().max(40).optional(),
               notes: z.string().trim().max(200).optional(),
             }),
@@ -323,6 +325,8 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
           position: j,
           sets: it.sets,
           reps: it.reps,
+          rpe: it.rpe || null,
+          rest: it.rest || null,
           load: it.load || null,
           notes: it.notes || null,
         })),
@@ -330,6 +334,7 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
     }
   });
   revalidatePath("/", "layout");
+  if (form.get("returnTo") === "schemas") redirect(`/trainer/schemas?saved=${d.clientId}`);
   redirect(`/trainer/clients/${d.clientId}?program=1`);
 }
 
@@ -371,6 +376,33 @@ export async function addExercise(_: FormResult, form: FormData): Promise<FormRe
   if (!res.length) return { error: "Die oefening bestaat al." };
   revalidatePath("/trainer/exercises");
   return { ok: `${name} toegevoegd.` };
+}
+
+/** Ontbrekende oefening toevoegen vanuit de schemabouwer; geeft de nieuwe oefening terug. */
+export async function quickAddExercise(nameRaw: string, categoryRaw: string) {
+  await requireUser("trainer");
+  const name = String(nameRaw ?? "").trim().replace(/\s+/g, " ");
+  const category = String(categoryRaw ?? "").trim().slice(0, 60) || "Overig";
+  if (name.length < 2 || name.length > 80) return { error: "Geef de oefening een naam van 2–80 tekens." } as const;
+  const cols = {
+    id: exercises.id,
+    name: exercises.name,
+    category: exercises.category,
+    region: exercises.region,
+    purpose: exercises.purpose,
+    cues: exercises.cues,
+  };
+  // Bestaat al (ook met andere hoofdletters)? Dan die gebruiken.
+  const findExisting = () => db.select(cols).from(exercises).where(sql`lower(${exercises.name}) = lower(${name})`).limit(1);
+  const [existing] = await findExisting();
+  if (existing) return { exercise: existing } as const;
+  const [created] = await db.insert(exercises).values({ name, category, builtIn: false }).onConflictDoNothing().returning(cols);
+  if (created) {
+    revalidatePath("/exercises");
+    return { exercise: created } as const;
+  }
+  const [raced] = await findExisting();
+  return raced ? ({ exercise: raced } as const) : ({ error: "Kon de oefening niet toevoegen." } as const);
 }
 
 /* ---------- Account ---------- */

@@ -13,7 +13,7 @@ type Previous = Record<number, { date: string; sets: { reps: number; weight: num
 export type DayTemplate = {
   id: number;
   name: string;
-  items: { exerciseId: number; sets: number; reps: string; load: string | null }[];
+  items: { exerciseId: number; sets: number; reps: string; rpe: string | null; rest: string | null; load: string | null }[];
 };
 
 let nextKey = 1;
@@ -27,17 +27,29 @@ function firstNumber(reps: string) {
   return m ? m[0] : "";
 }
 
+/** Een voorgeschreven belasting als getal in kg ("60", "60 kg", "62,5kg"), anders null. */
+function prescribedKg(load: string | null) {
+  const m = load?.trim().match(/^(\d+(?:[.,]\d+)?)\s*(kg)?$/i);
+  return m ? m[1].replace(".", ",") : null;
+}
+
 function fromDay(day: DayTemplate | undefined, previous: Previous): Block[] {
   if (!day) return [{ key: nextKey++, exerciseId: "", sets: [{ reps: "", weight: "" }] }];
   return day.items.map((it) => {
     const prev = previous[it.exerciseId]?.sets ?? [];
+    const kg = prescribedKg(it.load);
+    const parts = [`${it.sets} × ${it.reps}`];
+    if (it.rpe) parts.push(`RPE ${it.rpe}`);
+    if (it.rest) parts.push(`rust ${it.rest}`);
+    parts.push(it.load ? `belasting ${it.load}` : "belasting zelf kiezen");
     return {
       key: nextKey++,
       exerciseId: it.exerciseId,
-      target: `${it.sets} × ${it.reps}${it.load ? ` · ${it.load}` : ""}`,
+      target: parts.join(" · "),
       sets: Array.from({ length: it.sets }, (_, i) => ({
         reps: firstNumber(it.reps),
-        weight: prev[i] ? fmt(prev[i].weight) : prev.length ? fmt(prev[prev.length - 1].weight) : "",
+        // Voorgeschreven kg gaat voor; anders wat de cliënt vorige keer deed. Altijd aan te passen.
+        weight: kg ?? (prev[i] ? fmt(prev[i].weight) : prev.length ? fmt(prev[prev.length - 1].weight) : ""),
       })),
     };
   });

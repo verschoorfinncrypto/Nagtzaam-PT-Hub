@@ -71,6 +71,11 @@ export const programExercises = pgTable("program_exercises", {
   position: integer("position").notNull().default(0),
   sets: integer("sets").notNull().default(3),
   reps: text("reps").notNull().default("8"),
+  /** Voorgeschreven RPE, bijv. "7" of "7-8". */
+  rpe: text("rpe"),
+  /** Voorgeschreven rust tussen sets, bijv. "90 s" of "2 min". */
+  rest: text("rest"),
+  /** Optioneel voorgeschreven belasting; leeg = cliënt kiest zelf tijdens het trainen. */
   load: text("load"),
   notes: text("notes"),
 });

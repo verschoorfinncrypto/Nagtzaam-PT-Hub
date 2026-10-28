@@ -230,3 +230,8 @@ details.cue p { margin-top: 4px; max-width: 60ch; }
 .months-label { font-size: 14px; color: var(--ink-muted); }
 .grid-kpi { grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
 @media (max-width: 900px) { .grid-kpi { grid-template-columns: repeat(2, 1fr); } }
+
+/* Schemabouwer */
+.quick-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; padding: 8px 10px; background: var(--brand-tint); border-radius: var(--radius-sm); }
+.quick-add select { width: auto; }
+table.builder td { padding-right: 8px; }

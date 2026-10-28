@@ -1,22 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { saveProgram } from "@/lib/actions";
+import { quickAddExercise, saveProgram } from "@/lib/actions";
 import { ExerciseDatalist, ExercisePicker, type PickerExercise } from "./ExercisePicker";
 
 type Exercise = PickerExercise;
-type Item = { key: number; exerciseId: number | ""; sets: string; reps: string; load: string; notes: string };
+type Item = {
+  key: number;
+  exerciseId: number | "";
+  sets: string;
+  reps: string;
+  rpe: string;
+  rest: string;
+  load: string;
+  notes: string;
+  /** Getypte naam die nog niet in de database staat. */
+  missing: string;
+};
 type Day = { key: number; name: string; items: Item[] };
 
 export type ProgramInit = {
   name: string;
   notes: string;
-  days: { name: string; items: { exerciseId: number; sets: number; reps: string; load: string | null; notes: string | null }[] }[];
+  days: {
+    name: string;
+    items: {
+      exerciseId: number;
+      sets: number;
+      reps: string;
+      rpe: string | null;
+      rest: string | null;
+      load: string | null;
+      notes: string | null;
+    }[];
+  }[];
 };
 
 let k = 1;
-const emptyItem = (): Item => ({ key: k++, exerciseId: "", sets: "3", reps: "8", load: "", notes: "" });
+const emptyItem = (): Item => ({ key: k++, exerciseId: "", sets: "3", reps: "8", rpe: "", rest: "", load: "", notes: "", missing: "" });
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -27,7 +50,66 @@ function Submit() {
   );
 }
 
-export function ProgramBuilder({ clientId, exercises, initial }: { clientId: number; exercises: Exercise[]; initial?: ProgramInit }) {
+function QuickAdd({
+  name,
+  categories,
+  onAdded,
+}: {
+  name: string;
+  categories: string[];
+  onAdded: (e: Exercise) => void;
+}) {
+  const [category, setCategory] = useState("Overig");
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <div className="quick-add">
+      <span className="body-sm">
+        <b>{name}</b> staat nog niet in de database.
+      </span>
+      <select className="compact" aria-label="Categorie nieuwe oefening" value={category} onChange={(e) => setCategory(e.target.value)}>
+        {[...new Set([...categories, "Overig"])].map((c) => <option key={c}>{c}</option>)}
+      </select>
+      <button
+        type="button"
+        className="btn btn-sm btn-primary"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            setError("");
+            const res = await quickAddExercise(name, category);
+            if ("error" in res && res.error) setError(res.error);
+            else if ("exercise" in res && res.exercise) onAdded(res.exercise);
+          })
+        }
+      >
+        {pending ? "Toevoegen…" : "+ Toevoegen"}
+      </button>
+      {error && <span className="error">{error}</span>}
+    </div>
+  );
+}
+
+export function ProgramBuilder({
+  clients,
+  clientId,
+  exercises: initialExercises,
+  categories,
+  initial,
+  activeByClient,
+  returnTo,
+}: {
+  clients: { id: number; name: string }[];
+  clientId?: number;
+  exercises: Exercise[];
+  categories: string[];
+  initial?: ProgramInit;
+  /** Naam van het actieve schema per cliënt, om te waarschuwen dat het wordt vervangen. */
+  activeByClient: Record<number, string>;
+  returnTo?: "schemas";
+}) {
+  const [exercises, setExercises] = useState(initialExercises);
+  const [client, setClient] = useState<number | "">(clientId ?? "");
   const [days, setDays] = useState<Day[]>(() =>
     initial?.days.length
       ? initial.days.map((d) => ({
@@ -38,13 +120,18 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
             exerciseId: it.exerciseId,
             sets: String(it.sets),
             reps: it.reps,
+            rpe: it.rpe ?? "",
+            rest: it.rest ?? "",
             load: it.load ?? "",
             notes: it.notes ?? "",
+            missing: "",
           })),
         }))
       : [{ key: k++, name: "Dag A", items: [emptyItem()] }],
   );
   const [state, action] = useFormState(saveProgram, {});
+  const clientName = clients.find((c) => c.id === client)?.name;
+  const replaces = client !== "" ? activeByClient[client] : undefined;
 
   const payload = JSON.stringify(
     days.map((d) => ({
@@ -55,11 +142,14 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
           exerciseId: i.exerciseId,
           sets: parseInt(i.sets, 10) || 1,
           reps: i.reps,
+          rpe: i.rpe || undefined,
+          rest: i.rest || undefined,
           load: i.load || undefined,
           notes: i.notes || undefined,
         })),
     })),
   );
+  const unresolved = days.some((d) => d.items.some((i) => i.missing && i.exerciseId === ""));
 
   const setDay = (key: number, fn: (d: Day) => Day) => setDays((ds) => ds.map((d) => (d.key === key ? fn(d) : d)));
   const setItem = (dk: number, ik: number, patch: Partial<Item>) =>
@@ -67,18 +157,45 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
 
   return (
     <form action={action} className="stack">
-      <input type="hidden" name="clientId" value={clientId} />
+      <input type="hidden" name="clientId" value={client} />
       <input type="hidden" name="payload" value={payload} />
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       <ExerciseDatalist id="exercise-list" exercises={exercises} />
+
       <section className="card">
-        <label className="field">
-          <span className="label">Naam van het schema</span>
-          <input name="name" defaultValue={initial?.name ?? ""} placeholder="Bijv. Opbouw knie, blok 1" required maxLength={120} />
-        </label>
+        <div className="field-row">
+          <label className="field">
+            <span className="label">Cliënt</span>
+            <select value={client} onChange={(e) => setClient(e.target.value ? Number(e.target.value) : "")} required>
+              <option value="">Kies een cliënt…</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">Naam van het schema</span>
+            <input name="name" defaultValue={initial?.name ?? ""} placeholder="Bijv. Opbouw knie, blok 1" required maxLength={120} />
+          </label>
+        </div>
+        {clientName && (
+          <p className="hint">
+            Schema voor <b>{clientName}</b>.{" "}
+            {replaces ? (
+              <>
+                Vervangt het actieve schema &quot;{replaces}&quot;.{" "}
+                {client !== clientId && <Link href={`/trainer/schemas/new?client=${client}`}>Dat schema laden om te bewerken</Link>}
+              </>
+            ) : (
+              "Nog geen actief schema."
+            )}
+          </p>
+        )}
         <label className="field">
           <span className="label">Toelichting voor de cliënt (optioneel)</span>
           <textarea name="notes" defaultValue={initial?.notes ?? ""} maxLength={2000} placeholder="Doel van dit blok, hoe vaak per week, waar op letten…" />
         </label>
+        <p className="hint">
+          Sets, reps, RPE en rust schrijf jij voor. Belasting is optioneel: laat je die leeg, dan vult de cliënt het gewicht in tijdens het trainen.
+        </p>
       </section>
 
       {days.map((d, di) => (
@@ -97,9 +214,18 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
             )}
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="builder">
               <thead>
-                <tr><th style={{ minWidth: 200 }}>Oefening</th><th>Sets</th><th>Reps</th><th>Belasting</th><th>Notitie</th><th aria-label="Acties" /></tr>
+                <tr>
+                  <th style={{ minWidth: 220 }}>Oefening</th>
+                  <th>Sets</th>
+                  <th>Reps</th>
+                  <th>RPE</th>
+                  <th>Rust</th>
+                  <th>Belasting <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}>(optioneel)</span></th>
+                  <th>Notitie</th>
+                  <th aria-label="Acties" />
+                </tr>
               </thead>
               <tbody>
                 {d.items.map((it, ii) => (
@@ -112,12 +238,25 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
                         ariaLabel={`Oefening ${ii + 1}`}
                         value={it.exerciseId}
                         onChange={(id) => setItem(d.key, it.key, { exerciseId: id })}
+                        onUnmatched={(text) => setItem(d.key, it.key, { missing: text.length >= 2 ? text : "" })}
                       />
+                      {it.missing && it.exerciseId === "" && (
+                        <QuickAdd
+                          name={it.missing}
+                          categories={categories}
+                          onAdded={(ex) => {
+                            setExercises((xs) => (xs.some((x) => x.id === ex.id) ? xs : [...xs, ex].sort((a, b) => a.name.localeCompare(b.name, "nl"))));
+                            setItem(d.key, it.key, { exerciseId: ex.id, missing: "" });
+                          }}
+                        />
+                      )}
                     </td>
-                    <td><input className="compact" style={{ width: 64 }} inputMode="numeric" aria-label="Sets" value={it.sets} onChange={(e) => setItem(d.key, it.key, { sets: e.target.value })} /></td>
-                    <td><input className="compact" style={{ width: 80 }} aria-label="Reps" value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>
-                    <td><input className="compact" style={{ width: 110 }} aria-label="Belasting" value={it.load} onChange={(e) => setItem(d.key, it.key, { load: e.target.value })} placeholder="RPE 7 / 60 kg" /></td>
-                    <td><input className="compact" aria-label="Notitie" value={it.notes} onChange={(e) => setItem(d.key, it.key, { notes: e.target.value })} placeholder="Tempo 3-1-1" /></td>
+                    <td><input className="compact" style={{ width: 56 }} inputMode="numeric" aria-label="Sets" value={it.sets} onChange={(e) => setItem(d.key, it.key, { sets: e.target.value })} /></td>
+                    <td><input className="compact" style={{ width: 72 }} aria-label="Reps" value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>
+                    <td><input className="compact" style={{ width: 60 }} inputMode="decimal" aria-label="RPE" value={it.rpe} onChange={(e) => setItem(d.key, it.key, { rpe: e.target.value })} placeholder="7" /></td>
+                    <td><input className="compact" style={{ width: 76 }} aria-label="Rust" value={it.rest} onChange={(e) => setItem(d.key, it.key, { rest: e.target.value })} placeholder="90 s" /></td>
+                    <td><input className="compact" style={{ width: 104 }} aria-label="Belasting" value={it.load} onChange={(e) => setItem(d.key, it.key, { load: e.target.value })} placeholder="cliënt kiest" /></td>
+                    <td><input className="compact" style={{ minWidth: 120 }} aria-label="Notitie" value={it.notes} onChange={(e) => setItem(d.key, it.key, { notes: e.target.value })} placeholder="Tempo 3-1-1" /></td>
                     <td>
                       <button type="button" className="btn btn-ghost btn-sm" aria-label="Oefening verwijderen" onClick={() => setDay(d.key, (x) => ({ ...x, items: x.items.filter((i) => i.key !== it.key) }))}>×</button>
                     </td>
@@ -146,10 +285,11 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
         </div>
       )}
 
+      {unresolved && <p className="error">Er staat nog een oefening die niet in de database staat. Voeg hem toe of kies een bestaande; anders wordt hij niet opgeslagen.</p>}
       {state.error && <p className="error" role="alert">{state.error}</p>}
       <div className="actions">
         <Submit />
-        <span className="hint">Het vorige actieve schema wordt gearchiveerd; gelogde trainingen blijven bewaard.</span>
+        <span className="hint">Het vorige actieve schema van deze cliënt wordt gearchiveerd; gelogde trainingen blijven bewaard.</span>
       </div>
     </form>
   );
