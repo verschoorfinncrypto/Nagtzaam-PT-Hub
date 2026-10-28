@@ -71,6 +71,13 @@ export async function requireUser(role?: User["role"]) {
   return u;
 }
 
+/** Alleen de beheerder van de trainers. */
+export async function requireAdmin() {
+  const u = await requireUser("trainer");
+  if (!u.isAdmin || (await currentSession())?.by) redirect("/trainer/team");
+  return u;
+}
+
 /** De cliënt waarvan de ingelogde gebruiker de gegevens mag zien: zichzelf, of een cliënt van deze trainer. */
 export async function requireClientAccess(clientId: number) {
   const u = await requireUser();

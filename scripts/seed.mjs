@@ -29,13 +29,23 @@ try {
       if (TRAINER_PASSWORD.length < 10) throw new Error("TRAINER_PASSWORD moet minstens 10 tekens zijn.");
       const hash = await bcrypt.hash(TRAINER_PASSWORD, 12);
       await pool.query(
-        "INSERT INTO users (email, name, password_hash, role) VALUES ($1, $2, $3, 'trainer')",
+        "INSERT INTO users (email, name, password_hash, role, is_admin) VALUES ($1, $2, $3, 'trainer', true)",
         [TRAINER_EMAIL.trim().toLowerCase(), TRAINER_NAME?.trim() || "Trainer", hash],
       );
       console.log(`Eerste trainer aangemaakt: ${TRAINER_EMAIL}`);
     } else {
       console.warn("Nog geen gebruikers. Zet TRAINER_EMAIL en TRAINER_PASSWORD om de eerste trainer aan te maken.");
     }
+  }
+  // Beheerder: precies één trainer, op basis van ADMIN_EMAIL (of anders TRAINER_EMAIL).
+  const adminEmail = (process.env.ADMIN_EMAIL || process.env.TRAINER_EMAIL || "").trim().toLowerCase();
+  if (adminEmail) {
+    const r = await pool.query(
+      "UPDATE users SET is_admin = (lower(email) = $1) WHERE role = 'trainer' RETURNING email, is_admin",
+      [adminEmail],
+    );
+    const admin = r.rows.find((x) => x.is_admin);
+    console.log(admin ? `Beheerder: ${admin.email}` : `Let op: geen trainer met e-mail ${adminEmail}; er is nu geen beheerder.`);
   }
   console.log("Seed klaar.");
 } catch (err) {

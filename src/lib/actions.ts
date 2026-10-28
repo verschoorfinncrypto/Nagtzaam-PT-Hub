@@ -22,6 +22,7 @@ import {
   hashPassword,
   NO_EMAIL_DOMAIN,
   NO_LOGIN,
+  requireAdmin,
   requireClientAccess,
   requireUser,
   startSession,
@@ -257,7 +258,7 @@ export async function updateClient(_: FormResult, form: FormData): Promise<FormR
 }
 
 export async function addTrainer(_: FormResult, form: FormData): Promise<FormResult> {
-  await requireUser("trainer");
+  await requireAdmin();
   const parsed = clientSchema.omit({ goal: true }).safeParse({
     name: form.get("name"),
     email: form.get("email"),
@@ -269,6 +270,39 @@ export async function addTrainer(_: FormResult, form: FormData): Promise<FormRes
   if (exists) return { error: "Er bestaat al een account met dit e-mailadres." };
   await db.insert(users).values({ name: d.name, email: d.email, passwordHash: await hashPassword(d.password), role: "trainer" });
   return { ok: `Trainer ${d.name} toegevoegd.` };
+}
+
+/** Beheerder: wachtwoord van een trainer opnieuw instellen. */
+export async function resetTrainerPassword(_: FormResult, form: FormData): Promise<FormResult> {
+  await requireAdmin();
+  const id = Number(form.get("trainerId"));
+  const password = String(form.get("password") ?? "");
+  if (password.length < 10) return { error: "Het nieuwe wachtwoord moet minstens 10 tekens zijn." };
+  const [t] = await db.select().from(users).where(and(eq(users.id, id), eq(users.role, "trainer"))).limit(1);
+  if (!t) return { error: "Trainer niet gevonden." };
+  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, id));
+  return { ok: `Nieuw wachtwoord voor ${t.name} is actief.` };
+}
+
+/** Beheerder: trainer verwijderen; diens cliënten gaan naar een andere trainer. */
+export async function deleteTrainer(_: FormResult, form: FormData): Promise<FormResult> {
+  const admin = await requireAdmin();
+  const id = Number(form.get("trainerId"));
+  const to = Number(form.get("transferTo"));
+  if (id === admin.id) return { error: "Je kunt jezelf niet verwijderen." };
+  const [t] = await db.select().from(users).where(and(eq(users.id, id), eq(users.role, "trainer"))).limit(1);
+  if (!t) return { error: "Trainer niet gevonden." };
+  if (t.isAdmin) return { error: "De beheerder kan niet verwijderd worden." };
+  const [target] = await db.select().from(users).where(and(eq(users.id, to), eq(users.role, "trainer"))).limit(1);
+  if (!target || target.id === id) return { error: "Kies een andere trainer om de cliënten aan over te dragen." };
+  const moved = await db.transaction(async (tx) => {
+    const r = await tx.update(users).set({ trainerId: target.id }).where(and(eq(users.trainerId, id), eq(users.role, "client"))).returning({ id: users.id });
+    await tx.delete(users).where(eq(users.id, id));
+    return r.length;
+  });
+  revalidatePath("/", "layout");
+  const msg = `${t.name} is verwijderd. ${moved} ${moved === 1 ? "cliënt is" : "cliënten zijn"} overgedragen aan ${target.name}.`;
+  redirect(`/trainer/team?msg=${encodeURIComponent(msg)}`);
 }
 
 /* ---------- Schema's (trainer) ---------- */

@@ -243,3 +243,11 @@ table.builder td { padding-right: 8px; }
 .btn-danger-solid:hover { background: #9c370b; }
 .delete-confirm { display: grid; gap: 8px; justify-items: end; text-align: right; max-width: 320px; margin-left: auto; padding: 10px 12px; border: 1px solid var(--alert); border-radius: var(--radius-sm); background: #fdf4ef; }
 .danger-zone { border-top: 1px solid var(--line); padding-top: var(--space-4); display: flex; justify-content: flex-end; }
+
+/* Team */
+.team-list li { display: block; }
+.team-manage { margin-top: 8px; }
+.team-manage summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.team-manage > .stack { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.check input { width: 18px; height: 18px; min-height: 0; }

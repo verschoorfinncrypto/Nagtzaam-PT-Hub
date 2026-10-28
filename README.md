@@ -10,6 +10,7 @@ Webapp waarin trainers en cliënten trainingen, lichaamsgewicht, schema's en PR'
 - **Schema's** (`/trainer/schemas`): overzicht van alle actieve schema's per cliënt en een schemabouwer met cliëntkeuze. Alle oefeningen uit de database zijn te kiezen; ontbreekt er een, dan voeg je hem direct toe. Per oefening schrijft de trainer sets, reps, RPE en rust voor; de belasting is optioneel: leeg = de cliënt kiest het gewicht tijdens het trainen, ingevuld (bijv. `40 kg`) = wordt in de logger vooraf ingevuld.
 - **Data** (`/trainer/data`, voor alle trainers): overzicht van de hele praktijk: aantal en groei van cliënten, aandeel vanuit fysio (herkomst per cliënt), actieve cliënten, behoud na 4 weken, trainingen per week, PR's, gewicht bijhouden, cijfers per trainer, meest getrainde oefeningen en wie aandacht nodig heeft.
 - **Cliënten verwijderen** met het prullenbakje in de cliëntenlijst of op de cliëntpagina, na bevestiging. Definitief: trainingen, schema's en metingen van die cliënt worden mee verwijderd.
+- **Beheerder**: precies één trainer (`ADMIN_EMAIL`, anders `TRAINER_EMAIL`) beheert onder Team de trainers: toevoegen, wachtwoord resetten, verwijderen (cliënten gaan dan naar een gekozen trainer). Wordt bij elke start opnieuw gezet. Andere trainers hebben verder dezelfde functies.
 - Een trainer ziet alleen de eigen cliënten; een cliënt alleen zichzelf.
 
 Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessies via een ondertekende cookie (jose), wachtwoorden met bcrypt. Styling volgt het design system *Nagtzaam PT Hub*.
@@ -27,6 +28,7 @@ Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessie
    | `TRAINER_EMAIL` | jouw e-mailadres |
    | `TRAINER_NAME` | jouw naam |
    | `TRAINER_PASSWORD` | startwachtwoord, minstens 10 tekens |
+   | `ADMIN_EMAIL` | optioneel: e-mail van de beheerder van de trainers; standaard `TRAINER_EMAIL` |
 
 4. Deploy. Bij elke start draaien eerst de migraties (`drizzle/`) en de seed: die vult en actualiseert de oefenbibliotheek (`scripts/exercise-library.mjs`) en maakt het eerste traineraccount aan zolang er nog geen gebruikers zijn. Daarna kun je `TRAINER_PASSWORD` weghalen en je wachtwoord wijzigen onder **Account**.
 5. **Settings → Networking → Generate Domain** voor een publieke URL (of koppel een eigen domein, bijv. `hub.fysiotherapienagtzaam.nl`).

@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: ["trainer", "client"] }).notNull(),
+  /** Beheerder van de trainers (toevoegen, verwijderen, wachtwoord resetten). Wordt bij elke start gezet vanuit ADMIN_EMAIL of TRAINER_EMAIL. */
+  isAdmin: boolean("is_admin").notNull().default(false),
   trainerId: integer("trainer_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   goal: text("goal"),
   /** Herkomst van een cliënt: doorgestroomd vanuit de fysiotherapie of van buiten. */
