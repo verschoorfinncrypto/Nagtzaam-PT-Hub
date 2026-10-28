@@ -54,4 +54,4 @@ scripts/                migratie en seed (draaien bij start)
 
 - Wachtwoord vergeten per e-mail (nu reset de trainer het wachtwoord op de cliëntpagina).
 - Trainingen achteraf bewerken (wel verwijderen en opnieuw loggen).
-- Logo van de praktijk: de naam staat nu in tekst.
+- Logo als SVG: de huidige PNG's in `public/brand/` zijn uitgesneden uit een afbeelding van 447 px. Vervang ze door een SVG zodra de praktijk die heeft.

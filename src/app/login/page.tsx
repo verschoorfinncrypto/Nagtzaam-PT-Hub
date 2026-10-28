@@ -10,9 +10,10 @@ export default async function LoginPage() {
   return (
     <main className="login">
       <section className="login-side">
-        <div>
-          <p className="label">Fysiotherapie Nagtzaam</p>
-          <p className="h2">PT Hub</p>
+        <div className="stack" style={{ gap: 12 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="login-logo" src="/brand/logo-white.png" alt="Fysiotherapie Nagtzaam" width={200} height={40} />
+          <p className="label">PT Hub</p>
         </div>
         <div className="stack">
           <h1 className="display">Herstellen. Opbouwen. Presteren.</h1>
@@ -22,7 +23,7 @@ export default async function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="body-sm" style={{ color: "#cfccc5" }}>
+        <p className="body-sm muted">
           Houd je trainingen, gewicht en PR&apos;s bij, samen met je trainer.
         </p>
       </section>

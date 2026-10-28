@@ -37,15 +37,15 @@ export default async function Dashboard() {
         <div className="actions" style={{ gap: 32, alignItems: "end" }}>
           <p>
             <span className="metric">{thisWeek.sessions}</span>
-            <span className="unit" style={{ color: "#cfccc5" }}>{target ? `van ${target} trainingen` : "trainingen"}</span>
+            <span className="unit">{target ? `van ${target} trainingen` : "trainingen"}</span>
           </p>
           <p>
             <span className="metric">{kg(thisWeek.volume, 0)}</span>
-            <span className="unit" style={{ color: "#cfccc5" }}>kg volume</span>
+            <span className="unit">kg volume</span>
           </p>
         </div>
         {target > 0 && (
-          <div className="progress" style={{ background: "#3a3936" }} aria-label={`${thisWeek.sessions} van ${target} trainingen gedaan`}>
+          <div className="progress" aria-label={`${thisWeek.sessions} van ${target} trainingen gedaan`}>
             <span style={{ width: `${Math.min(100, (thisWeek.sessions / target) * 100)}%` }} />
           </div>
         )}

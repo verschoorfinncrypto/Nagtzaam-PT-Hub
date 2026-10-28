@@ -23,8 +23,9 @@ export function Shell({ user, children }: { user: User; children: React.ReactNod
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link href="/" className="brand">
-            <b>Fysiotherapie Nagtzaam</b>
+          <Link href="/" className="brand" aria-label="Fysiotherapie Nagtzaam PT Hub, naar overzicht">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-white.png" alt="" width={150} height={30} />
             <span>PT Hub</span>
           </Link>
           <NavLinks items={nav} />

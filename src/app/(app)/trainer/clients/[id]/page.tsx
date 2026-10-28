@@ -33,7 +33,7 @@ export default async function ClientPage({
         </div>
         <div className="actions">
           <Link href={`/workouts/new?client=${client.id}`} className="btn btn-primary">Training loggen</Link>
-          <Link href={`/trainer/clients/${client.id}/program`} className="btn btn-dark">
+          <Link href={`/trainer/clients/${client.id}/program`} className="btn">
             {program ? "Schema aanpassen" : "Schema maken"}
           </Link>
         </div>
