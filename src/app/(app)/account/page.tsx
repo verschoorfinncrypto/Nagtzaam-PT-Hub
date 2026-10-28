@@ -1,6 +1,6 @@
 import { ActionForm } from "@/components/ActionForm";
 import { changePassword } from "@/lib/actions";
-import { requireUser } from "@/lib/auth";
+import { displayEmail, requireUser } from "@/lib/auth";
 
 export const metadata = { title: "Account" };
 
@@ -11,7 +11,7 @@ export default async function AccountPage() {
       <div className="page-head">
         <div>
           <h1 className="h1">Account</h1>
-          <p className="muted">{me.name} · {me.email}</p>
+          <p className="muted">{me.name} · {displayEmail(me.email) ?? "geen e-mailadres"}</p>
         </div>
       </div>
       <section className="card" style={{ maxWidth: 520 }}>

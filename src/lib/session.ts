@@ -4,7 +4,8 @@ import { jwtVerify, SignJWT } from "jose";
 export const SESSION_COOKIE = "hub_session";
 export const SESSION_DAYS = 30;
 
-export type SessionPayload = { uid: number; role: "trainer" | "client" };
+/** `by` = id van de trainer die via "Bekijk als cliënt" in deze cliëntsessie zit. */
+export type SessionPayload = { uid: number; role: "trainer" | "client"; by?: number };
 
 function secret() {
   const s = process.env.SESSION_SECRET;
@@ -25,7 +26,8 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.uid !== "number" || (payload.role !== "trainer" && payload.role !== "client")) return null;
-    return { uid: payload.uid, role: payload.role };
+    const by = typeof payload.by === "number" ? payload.by : undefined;
+    return { uid: payload.uid, role: payload.role, ...(by ? { by } : {}) };
   } catch {
     return null;
   }

@@ -207,3 +207,11 @@ details.cue p { margin-top: 4px; max-width: 60ch; }
 .ex-detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 0; font-size: 14px; line-height: 20px; }
 .ex-detail dt { color: var(--ink-muted); }
 .ex-detail dd { margin: 0; }
+
+/* Banner bij "Bekijk als cliënt" */
+.viewas {
+  background: var(--brand-tint); color: var(--ink); border-bottom: 2px solid var(--brand);
+  padding: 8px var(--space-6); display: flex; gap: var(--space-4); align-items: center; justify-content: center; flex-wrap: wrap;
+  font-size: 15px; line-height: 20px;
+}
+.viewas form { margin: 0; }

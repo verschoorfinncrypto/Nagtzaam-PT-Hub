@@ -47,6 +47,7 @@ export default async function TrainerHome() {
                     <td>
                       <Link href={`/trainer/clients/${c.id}`} style={{ fontWeight: 600 }}>{c.name}</Link>
                       {c.goal && <><br /><span className="body-sm muted">{c.goal}</span></>}
+                      {!c.canLogin && <> <span className="tag">Geen login</span></>}
                     </td>
                     <td>{c.program ?? <span className="tag tag-alert">Geen schema</span>}</td>
                     <td>

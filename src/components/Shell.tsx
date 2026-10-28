@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { User } from "@/db";
 import { logout } from "@/app/login/actions";
+import { stopViewAs } from "@/lib/actions";
 import { NavLinks } from "./NavLinks";
 
 const CLIENT_NAV = [
@@ -18,10 +19,20 @@ const TRAINER_NAV = [
   { href: "/trainer/team", label: "Team" },
 ];
 
-export function Shell({ user, children }: { user: User; children: React.ReactNode }) {
+export function Shell({ user, viewer, children }: { user: User; viewer?: User | null; children: React.ReactNode }) {
   const nav = user.role === "trainer" ? TRAINER_NAV : CLIENT_NAV;
   return (
     <>
+      {viewer && (
+        <div className="viewas" role="status">
+          <span>
+            Je bekijkt de hub als <b>{user.name}</b>. Wat je hier doet, wordt opgeslagen bij deze cliënt.
+          </span>
+          <form action={stopViewAs}>
+            <button type="submit" className="btn btn-sm">Terug naar trainer</button>
+          </form>
+        </div>
+      )}
       <header className="topbar">
         <div className="topbar-inner">
           <Link href="/" className="brand" aria-label="Fysiotherapie Nagtzaam PT Hub, naar overzicht">

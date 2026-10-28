@@ -22,13 +22,16 @@ export default async function NewClient() {
             <input name="name" required maxLength={100} autoComplete="off" />
           </label>
           <label className="field">
-            <span className="label">E-mail</span>
-            <input name="email" type="email" required autoComplete="off" />
+            <span className="label">E-mail (optioneel)</span>
+            <input name="email" type="email" autoComplete="off" />
           </label>
           <label className="field">
-            <span className="label">Startwachtwoord</span>
-            <input name="password" type="text" minLength={10} required autoComplete="new-password" />
-            <span className="hint">Minstens 10 tekens. Geef het persoonlijk door; de cliënt kan het daarna zelf wijzigen onder Account.</span>
+            <span className="label">Startwachtwoord (optioneel)</span>
+            <input name="password" type="text" minLength={10} autoComplete="new-password" />
+            <span className="hint">
+              Leeg laten = de cliënt kan nog niet zelf inloggen. Je beheert alles zelf en kunt via &quot;Bekijk als cliënt&quot; de
+              hub testen zoals de cliënt hem ziet. Later stel je op de cliëntpagina alsnog een e-mail en wachtwoord in (minstens 10 tekens).
+            </span>
           </label>
           <label className="field">
             <span className="label">Doel (optioneel)</span>

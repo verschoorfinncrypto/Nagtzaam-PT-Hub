@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { ProgramDays, RecentWorkouts, WeightCard, WeightForm } from "@/components/overview";
 import { ProgressView } from "@/components/ProgressView";
-import { stopProgram, updateClient } from "@/lib/actions";
-import { requireClientAccess, requireUser } from "@/lib/auth";
+import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
+import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
 import { getActiveProgram, getBodyWeights, getWorkouts } from "@/lib/data";
 
 export const metadata = { title: "Cliënt" };
@@ -22,6 +22,8 @@ export default async function ClientPage({
     getBodyWeights(client.id, 365),
     getWorkouts(client.id, 8),
   ]);
+  const email = displayEmail(client.email);
+  const canLogin = hasLogin(client);
 
   return (
     <>
@@ -29,18 +31,30 @@ export default async function ClientPage({
         <div>
           <Link href="/trainer" className="body-sm">← Cliënten</Link>
           <h1 className="h1">{client.name}</h1>
-          <p className="muted">{client.goal ?? client.email}</p>
+          <p className="muted">
+            {client.goal ?? email ?? "Geen e-mailadres"}{" "}
+            {!canLogin && <span className="tag">Geen login</span>}
+          </p>
         </div>
         <div className="actions">
           <Link href={`/workouts/new?client=${client.id}`} className="btn btn-primary">Training loggen</Link>
           <Link href={`/trainer/clients/${client.id}/program`} className="btn">
             {program ? "Schema aanpassen" : "Schema maken"}
           </Link>
+          <form action={viewAsClient}>
+            <input type="hidden" name="clientId" value={client.id} />
+            <button type="submit" className="btn">Bekijk als cliënt</button>
+          </form>
         </div>
       </div>
 
-      {searchParams.created && (
+      {searchParams.created === "login" && (
         <p className="notice" role="status">Account aangemaakt. {client.name} kan nu inloggen met {client.email} en het startwachtwoord.</p>
+      )}
+      {searchParams.created === "nologin" && (
+        <p className="notice" role="status">
+          {client.name} is aangemaakt zonder login. Je kunt alles zelf bijhouden of via &quot;Bekijk als cliënt&quot; de hub testen zoals {client.name.split(" ")[0]} hem ziet.
+        </p>
       )}
       {searchParams.program && <p className="notice" role="status">Schema opgeslagen en actief gezet.</p>}
 
@@ -89,8 +103,12 @@ export default async function ClientPage({
               <input name="goal" defaultValue={client.goal ?? ""} maxLength={300} />
             </label>
             <label className="field">
-              <span className="label">Nieuw wachtwoord (optioneel)</span>
-              <input name="password" type="text" minLength={10} autoComplete="new-password" placeholder="Leeg laten om niet te wijzigen" />
+              <span className="label">E-mail{canLogin ? "" : " (nodig om in te loggen)"}</span>
+              <input name="email" type="email" defaultValue={email ?? ""} autoComplete="off" />
+            </label>
+            <label className="field">
+              <span className="label">{canLogin ? "Nieuw wachtwoord (optioneel)" : "Wachtwoord instellen (optioneel)"}</span>
+              <input name="password" type="text" minLength={10} autoComplete="new-password" placeholder={canLogin ? "Leeg laten om niet te wijzigen" : "Minstens 10 tekens; dan kan de cliënt zelf inloggen"} />
             </label>
           </ActionForm>
         </section>

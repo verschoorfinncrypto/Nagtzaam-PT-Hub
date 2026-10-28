@@ -275,7 +275,14 @@ export async function getLastSets(clientId: number) {
 
 export async function getClients(trainerId: number) {
   const clients = await db
-    .select({ id: users.id, name: users.name, email: users.email, goal: users.goal, createdAt: users.createdAt })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      goal: users.goal,
+      createdAt: users.createdAt,
+      canLogin: sql<boolean>`${users.passwordHash} like '$2%'`,
+    })
     .from(users)
     .where(and(eq(users.trainerId, trainerId), eq(users.role, "client")))
     .orderBy(asc(users.name));

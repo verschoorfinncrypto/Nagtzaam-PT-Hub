@@ -15,7 +15,18 @@ import {
   workouts,
   workoutSets,
 } from "@/db";
-import { checkPassword, hashPassword, requireClientAccess, requireUser } from "./auth";
+import {
+  checkPassword,
+  currentSession,
+  endSession,
+  hashPassword,
+  NO_EMAIL_DOMAIN,
+  NO_LOGIN,
+  requireClientAccess,
+  requireUser,
+  startSession,
+  viewingTrainer,
+} from "./auth";
 import { parseNum, today } from "./format";
 
 export type FormResult = { error?: string; ok?: string };
@@ -147,31 +158,61 @@ const clientSchema = z.object({
   goal: z.string().trim().max(300).optional(),
 });
 
+const newClientSchema = z.object({
+  name: z.string().trim().min(2, "Vul een naam in").max(100),
+  email: z.string().trim().toLowerCase().email("Vul een geldig e-mailadres in, of laat het leeg").optional(),
+  password: z.string().min(10, "Een wachtwoord moet minstens 10 tekens zijn, of laat het leeg").max(200).optional(),
+  goal: z.string().trim().max(300).optional(),
+});
+
+/** Wachtwoord en e-mail zijn optioneel: zonder wachtwoord kan de cliënt niet zelf inloggen en beheert de trainer alles. */
 export async function createClient(_: FormResult, form: FormData): Promise<FormResult> {
   const trainer = await requireUser("trainer");
-  const parsed = clientSchema.safeParse({
+  const parsed = newClientSchema.safeParse({
     name: form.get("name"),
-    email: form.get("email"),
-    password: form.get("password"),
+    email: String(form.get("email") ?? "").trim() || undefined,
+    password: String(form.get("password") ?? "") || undefined,
     goal: form.get("goal") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   const d = parsed.data;
-  const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.email, d.email)).limit(1);
+  if (d.password && !d.email) return { error: "Vul ook een e-mailadres in: daarmee logt de cliënt in." };
+  const email = d.email ?? `client-${crypto.randomUUID().slice(0, 12)}${NO_EMAIL_DOMAIN}`;
+  const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (exists) return { error: "Er bestaat al een account met dit e-mailadres." };
   const [c] = await db
     .insert(users)
     .values({
       name: d.name,
-      email: d.email,
-      passwordHash: await hashPassword(d.password),
+      email,
+      passwordHash: d.password ? await hashPassword(d.password) : NO_LOGIN,
       role: "client",
       trainerId: trainer.id,
       goal: d.goal ?? null,
     })
     .returning({ id: users.id });
   revalidatePath("/trainer");
-  redirect(`/trainer/clients/${c.id}?created=1`);
+  redirect(`/trainer/clients/${c.id}?created=${d.password ? "login" : "nologin"}`);
+}
+
+/** Trainer bekijkt en gebruikt de hub als deze cliënt (om te testen of samen in te vullen). */
+export async function viewAsClient(form: FormData) {
+  const trainer = await requireUser("trainer");
+  const { client } = await requireClientAccess(Number(form.get("clientId")));
+  await startSession(client, trainer.id);
+  redirect("/dashboard");
+}
+
+/** Terug naar het eigen traineraccount. */
+export async function stopViewAs() {
+  const s = await currentSession();
+  const trainer = await viewingTrainer();
+  if (!s?.by || !trainer) {
+    endSession();
+    redirect("/login");
+  }
+  await startSession(trainer);
+  redirect(`/trainer/clients/${s.uid}`);
 }
 
 export async function updateClient(_: FormResult, form: FormData): Promise<FormResult> {
@@ -181,14 +222,24 @@ export async function updateClient(_: FormResult, form: FormData): Promise<FormR
   const name = String(form.get("name") ?? "").trim();
   const goal = String(form.get("goal") ?? "").trim();
   const password = String(form.get("password") ?? "");
+  const emailRaw = String(form.get("email") ?? "").trim().toLowerCase();
   if (name.length < 2) return { error: "Vul een naam in." };
   if (password && password.length < 10) return { error: "Een nieuw wachtwoord moet minstens 10 tekens zijn." };
+  const [cur] = await db.select().from(users).where(eq(users.id, clientId)).limit(1);
+  let email = cur.email;
+  if (emailRaw && emailRaw !== cur.email) {
+    if (!z.string().email().safeParse(emailRaw).success) return { error: "Vul een geldig e-mailadres in." };
+    const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, emailRaw)).limit(1);
+    if (taken) return { error: "Er bestaat al een account met dit e-mailadres." };
+    email = emailRaw;
+  }
+  if (password && email.endsWith(NO_EMAIL_DOMAIN)) return { error: "Vul ook een e-mailadres in: daarmee logt de cliënt in." };
   await db
     .update(users)
-    .set({ name, goal: goal || null, ...(password ? { passwordHash: await hashPassword(password) } : {}) })
+    .set({ name, email, goal: goal || null, ...(password ? { passwordHash: await hashPassword(password) } : {}) })
     .where(eq(users.id, clientId));
   revalidatePath(`/trainer/clients/${clientId}`);
-  return { ok: password ? "Opgeslagen. Het nieuwe wachtwoord is actief." : "Opgeslagen." };
+  return { ok: password ? `Opgeslagen. ${name} kan nu inloggen met ${email}.` : "Opgeslagen." };
 }
 
 export async function addTrainer(_: FormResult, form: FormData): Promise<FormResult> {
@@ -321,6 +372,7 @@ export async function addExercise(_: FormResult, form: FormData): Promise<FormRe
 
 export async function changePassword(_: FormResult, form: FormData): Promise<FormResult> {
   const u = await requireUser();
+  if ((await currentSession())?.by) return { error: "Je bekijkt de hub als cliënt; het wachtwoord stel je in op de cliëntpagina." };
   const current = String(form.get("current") ?? "");
   const next = String(form.get("next") ?? "");
   const repeat = String(form.get("repeat") ?? "");
