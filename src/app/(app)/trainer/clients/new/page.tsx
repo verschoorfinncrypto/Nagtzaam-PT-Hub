@@ -34,6 +34,14 @@ export default async function NewClient() {
             </span>
           </label>
           <label className="field">
+            <span className="label">Herkomst</span>
+            <select name="source" defaultValue={"fysio"}>
+              <option value="">Onbekend</option>
+              <option value="fysio">Doorgestroomd vanuit fysiotherapie</option>
+              <option value="extern">Van buiten de praktijk</option>
+            </select>
+          </label>
+          <label className="field">
             <span className="label">Doel (optioneel)</span>
             <input name="goal" maxLength={300} placeholder="Bijv. na kniereva terug naar voetbal" />
           </label>

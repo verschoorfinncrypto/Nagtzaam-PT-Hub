@@ -165,6 +165,10 @@ const newClientSchema = z.object({
   goal: z.string().trim().max(300).optional(),
 });
 
+function parseSource(v: FormDataEntryValue | null) {
+  return v === "fysio" || v === "extern" ? v : null;
+}
+
 /** Wachtwoord en e-mail zijn optioneel: zonder wachtwoord kan de cliënt niet zelf inloggen en beheert de trainer alles. */
 export async function createClient(_: FormResult, form: FormData): Promise<FormResult> {
   const trainer = await requireUser("trainer");
@@ -189,6 +193,7 @@ export async function createClient(_: FormResult, form: FormData): Promise<FormR
       role: "client",
       trainerId: trainer.id,
       goal: d.goal ?? null,
+      source: parseSource(form.get("source")),
     })
     .returning({ id: users.id });
   revalidatePath("/trainer");
@@ -236,7 +241,7 @@ export async function updateClient(_: FormResult, form: FormData): Promise<FormR
   if (password && email.endsWith(NO_EMAIL_DOMAIN)) return { error: "Vul ook een e-mailadres in: daarmee logt de cliënt in." };
   await db
     .update(users)
-    .set({ name, email, goal: goal || null, ...(password ? { passwordHash: await hashPassword(password) } : {}) })
+    .set({ name, email, goal: goal || null, source: parseSource(form.get("source")), ...(password ? { passwordHash: await hashPassword(password) } : {}) })
     .where(eq(users.id, clientId));
   revalidatePath(`/trainer/clients/${clientId}`);
   return { ok: password ? `Opgeslagen. ${name} kan nu inloggen met ${email}.` : "Opgeslagen." };

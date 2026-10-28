@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["trainer", "client"] }).notNull(),
   trainerId: integer("trainer_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   goal: text("goal"),
+  /** Herkomst van een cliënt: doorgestroomd vanuit de fysiotherapie of van buiten. */
+  source: text("source", { enum: ["fysio", "extern"] }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

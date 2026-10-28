@@ -17,15 +17,20 @@ export function LineChart({
   goal,
   unit = "kg",
   label,
+  zero = false,
 }: {
   points: { date: string; value: number }[];
   goal?: number | null;
   unit?: string;
   label: string;
+  /** y-as laten beginnen bij 0 (voor aantallen). */
+  zero?: boolean;
 }) {
   if (points.length === 0) return <div className="empty">Nog geen metingen.</div>;
   const values = points.map((p) => p.value).concat(goal != null ? [goal] : []);
-  const { lo, hi } = niceRange(Math.min(...values), Math.max(...values));
+  const range = niceRange(zero ? 0 : Math.min(...values), Math.max(...values));
+  const lo = zero ? 0 : range.lo;
+  const hi = range.hi;
   const t0 = new Date(points[0].date).getTime();
   const t1 = new Date(points[points.length - 1].date).getTime();
   const innerW = W - PAD.left - PAD.right;

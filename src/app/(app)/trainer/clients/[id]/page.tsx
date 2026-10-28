@@ -103,6 +103,14 @@ export default async function ClientPage({
               <input name="goal" defaultValue={client.goal ?? ""} maxLength={300} />
             </label>
             <label className="field">
+              <span className="label">Herkomst</span>
+              <select name="source" defaultValue={client.source ?? ""}>
+                <option value="">Onbekend</option>
+                <option value="fysio">Doorgestroomd vanuit fysiotherapie</option>
+                <option value="extern">Van buiten de praktijk</option>
+              </select>
+            </label>
+            <label className="field">
               <span className="label">E-mail{canLogin ? "" : " (nodig om in te loggen)"}</span>
               <input name="email" type="email" defaultValue={email ?? ""} autoComplete="off" />
             </label>

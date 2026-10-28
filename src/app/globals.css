@@ -215,3 +215,18 @@ details.cue p { margin-top: 4px; max-width: 60ch; }
   font-size: 15px; line-height: 20px;
 }
 .viewas form { margin: 0; }
+
+/* Data-pagina */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--ink-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.sw-fysio { background: var(--brand); }
+.sw-extern { background: #6b7290; }
+.sw-onbekend { background: var(--line); }
+.months li { display: grid; grid-template-columns: 64px 1fr 96px; gap: 12px; align-items: center; padding: 8px 0; }
+.months-bar { display: flex; height: 14px; background: var(--surface-100); border-radius: var(--radius-pill); overflow: hidden; gap: 2px; }
+.months-bar > span { display: block; height: 100%; }
+.months-num { text-align: right; }
+.months-label { font-size: 14px; color: var(--ink-muted); }
+.grid-kpi { grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+@media (max-width: 900px) { .grid-kpi { grid-template-columns: repeat(2, 1fr); } }

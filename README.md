@@ -7,6 +7,7 @@ Webapp waarin trainers en cliënten trainingen, lichaamsgewicht, schema's en PR'
 - **Oefenbibliotheek** met 265 oefeningen voor revalidatie en spieropbouw, elk met regio, materiaal, doel, niveau, spiergroepen en een korte uitvoeringsinstructie. Doorzoekbaar en filterbaar op `/exercises`; trainers kunnen eigen oefeningen toevoegen. In schema's en de logger kies je een oefening door te typen.
 - **Cliënten zonder login**: e-mail en wachtwoord zijn optioneel bij het aanmaken. Zo'n cliënt beheert de trainer zelf; later kan op de cliëntpagina alsnog een e-mail en wachtwoord worden ingesteld.
 - **Bekijk als cliënt**: een trainer kan de hub gebruiken zoals een eigen cliënt hem ziet (om te testen of samen in te vullen), met een balk bovenin om terug te gaan.
+- **Data** (`/trainer/data`, voor alle trainers): overzicht van de hele praktijk: aantal en groei van cliënten, aandeel vanuit fysio (herkomst per cliënt), actieve cliënten, behoud na 4 weken, trainingen per week, PR's, gewicht bijhouden, cijfers per trainer, meest getrainde oefeningen en wie aandacht nodig heeft.
 - Een trainer ziet alleen de eigen cliënten; een cliënt alleen zichzelf.
 
 Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessies via een ondertekende cookie (jose), wachtwoorden met bcrypt. Styling volgt het design system *Nagtzaam PT Hub*.
