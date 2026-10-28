@@ -72,7 +72,7 @@ h1, h2, h3, p { margin: 0; }
 .who { display: flex; align-items: center; gap: var(--space-4); font-size: 14px; color: var(--on-brand-muted); }
 .who button { background: none; border: 1px solid #4a5270; color: var(--on-brand); border-radius: var(--radius-pill); padding: 4px 12px; font: inherit; cursor: pointer; }
 .page { max-width: 1080px; margin: 0 auto; padding: var(--space-6); display: grid; gap: var(--space-6); }
-.page-head { display: flex; justify-content: space-between; align-items: end; gap: var(--space-4); flex-wrap: wrap; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
 .page-head p { margin-top: var(--space-1); }
 
 /* Kaarten en rasters */
@@ -186,3 +186,24 @@ input.compact, select.compact { min-height: 36px; padding: 4px 8px; }
   .h1 { font-size: 28px; line-height: 32px; }
   .display { font-size: 36px; line-height: 38px; }
 }
+
+/* Uitvoering (inklapbaar) */
+details.cue { font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+details.cue summary { cursor: pointer; font-weight: 600; color: var(--ink); width: max-content; }
+details.cue p { margin-top: 4px; max-width: 60ch; }
+
+/* Oefenbibliotheek */
+.filters { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: flex-end; }
+.filters-q { grid-column: 1 / -1; }
+.filters-actions { grid-column: 1 / -1; }
+.ex-list li { display: block; }
+.ex-list summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; list-style: none; padding: 2px 0; }
+.ex-list summary::-webkit-details-marker { display: none; }
+.ex-list summary::before { content: "+"; font-weight: 700; color: var(--ink-muted); width: 14px; flex: none; }
+.ex-list details[open] summary::before { content: "−"; }
+.ex-name { font-weight: 600; flex: 1; }
+.ex-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.ex-detail { padding: 8px 0 4px 26px; display: grid; gap: 8px; max-width: 70ch; }
+.ex-detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 0; font-size: 14px; line-height: 20px; }
+.ex-detail dt { color: var(--ink-muted); }
+.ex-detail dd { margin: 0; }

@@ -193,6 +193,12 @@ export function ProgramDays({
                   <td>
                     {it.exerciseName}
                     {it.notes && <><br /><span className="body-sm muted">{it.notes}</span></>}
+                    {it.cues && (
+                      <details className="cue">
+                        <summary>Uitvoering</summary>
+                        <p>{it.cues}</p>
+                      </details>
+                    )}
                   </td>
                   <td>{it.sets} × {it.reps}</td>
                   <td>{it.load || <span className="muted">–</span>}</td>

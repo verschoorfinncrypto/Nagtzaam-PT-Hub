@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { WorkoutForm } from "@/components/WorkoutForm";
 import { requireClientAccess, requireUser } from "@/lib/auth";
-import { getActiveProgram, getExercises, getLastSets } from "@/lib/data";
+import { getActiveProgram, getExerciseOptions, getLastSets } from "@/lib/data";
 import { today } from "@/lib/format";
 
 export const metadata = { title: "Training loggen" };
@@ -10,7 +10,7 @@ export default async function NewWorkout({ searchParams }: { searchParams: { day
   const me = await requireUser();
   const clientId = me.role === "trainer" ? Number(searchParams.client) : me.id;
   const { client } = await requireClientAccess(clientId);
-  const [exercises, program, previous] = await Promise.all([getExercises(), getActiveProgram(client.id), getLastSets(client.id)]);
+  const [exercises, program, previous] = await Promise.all([getExerciseOptions(), getActiveProgram(client.id), getLastSets(client.id)]);
   const days = (program?.days ?? []).map((d) => ({
     id: d.id,
     name: d.name,

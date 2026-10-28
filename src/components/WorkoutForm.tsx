@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveWorkout } from "@/lib/actions";
+import { ExerciseDatalist, ExercisePicker, type PickerExercise } from "./ExercisePicker";
 
-type Exercise = { id: number; name: string; category: string };
+type Exercise = PickerExercise;
 type SetRow = { reps: string; weight: string };
 type Block = { key: number; exerciseId: number | ""; target?: string; sets: SetRow[] };
 type Previous = Record<number, { date: string; sets: { reps: number; weight: number }[] }>;
@@ -72,12 +73,6 @@ export function WorkoutForm({
   const [blocks, setBlocks] = useState<Block[]>(() => fromDay(initialDay, previous));
   const [state, action] = useFormState(saveWorkout, {});
 
-  const byCategory = useMemo(() => {
-    const m = new Map<string, Exercise[]>();
-    for (const e of exercises) m.set(e.category, [...(m.get(e.category) ?? []), e]);
-    return [...m.entries()];
-  }, [exercises]);
-
   const payload = JSON.stringify(
     blocks
       .filter((b) => b.exerciseId !== "")
@@ -106,6 +101,7 @@ export function WorkoutForm({
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="payload" value={payload} />
       <input type="hidden" name="programDayId" value={dayId} />
+      <ExerciseDatalist id="exercise-list" exercises={exercises} />
 
       <section className="card">
         <div className="field-row">
@@ -137,20 +133,15 @@ export function WorkoutForm({
           <section key={b.key} className="ex-block" style={{ background: "var(--surface-000)" }}>
             <div className="ex-head">
               <span className="label" style={{ minWidth: 24 }}>{bi + 1}</span>
-              <select
-                aria-label={`Oefening ${bi + 1}`}
-                value={b.exerciseId}
-                onChange={(e) => update(b.key, (x) => ({ ...x, exerciseId: e.target.value ? Number(e.target.value) : "" }))}
-              >
-                <option value="">Kies een oefening…</option>
-                {byCategory.map(([cat, list]) => (
-                  <optgroup key={cat} label={cat}>
-                    {list.map((e) => (
-                      <option key={e.id} value={e.id}>{e.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <div style={{ flex: 1 }}>
+                <ExercisePicker
+                  listId="exercise-list"
+                  exercises={exercises}
+                  ariaLabel={`Oefening ${bi + 1}`}
+                  value={b.exerciseId}
+                  onChange={(id) => update(b.key, (x) => ({ ...x, exerciseId: id }))}
+                />
+              </div>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -160,6 +151,15 @@ export function WorkoutForm({
                 Verwijder
               </button>
             </div>
+            {(() => {
+              const ex = b.exerciseId !== "" ? exercises.find((e) => e.id === b.exerciseId) : undefined;
+              return ex?.cues ? (
+                <details className="cue">
+                  <summary>Uitvoering</summary>
+                  <p>{ex.cues}</p>
+                </details>
+              ) : null;
+            })()}
             {(b.target || prev) && (
               <p className="target">
                 {b.target && <>Schema: <b>{b.target}</b></>}

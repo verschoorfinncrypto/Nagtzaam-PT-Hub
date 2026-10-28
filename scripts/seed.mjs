@@ -1,31 +1,26 @@
-// Idempotent: vult de oefeningenbibliotheek en maakt het eerste traineraccount aan
+// Idempotent: vult en actualiseert de oefenbibliotheek (scripts/exercise-library.mjs) en maakt het eerste traineraccount aan
 // (uit TRAINER_EMAIL / TRAINER_NAME / TRAINER_PASSWORD) zolang er nog geen gebruikers zijn.
 import bcrypt from "bcryptjs";
 import pg from "pg";
+import { EXERCISE_LIBRARY } from "./exercise-library.mjs";
 
 const url = process.env.DATABASE_URL;
 const local = /localhost|127\.0\.0\.1|\.railway\.internal|sslmode=disable/.test(url ?? "");
 const pool = new pg.Pool({ connectionString: url, ssl: local ? undefined : { rejectUnauthorized: false } });
 
-const EXERCISES = [
-  ["Back squat", "Benen"], ["Front squat", "Benen"], ["Goblet squat", "Benen"], ["Bulgarian split squat", "Benen"],
-  ["Lunge", "Benen"], ["Leg press", "Benen"], ["Leg extension", "Benen"], ["Leg curl", "Benen"],
-  ["Step-up", "Benen"], ["Calf raise", "Benen"],
-  ["Deadlift", "Heup"], ["Romanian deadlift", "Heup"], ["Trap bar deadlift", "Heup"], ["Hip thrust", "Heup"],
-  ["Glute bridge", "Heup"], ["Kettlebell swing", "Heup"],
-  ["Bench press", "Duwen"], ["Incline dumbbell press", "Duwen"], ["Dumbbell bench press", "Duwen"],
-  ["Overhead press", "Duwen"], ["Push-up", "Duwen"], ["Dips", "Duwen"], ["Landmine press", "Duwen"],
-  ["Pull-up", "Trekken"], ["Lat pulldown", "Trekken"], ["Barbell row", "Trekken"], ["Seated cable row", "Trekken"],
-  ["One-arm dumbbell row", "Trekken"], ["Face pull", "Trekken"], ["Inverted row", "Trekken"],
-  ["Plank", "Core"], ["Side plank", "Core"], ["Dead bug", "Core"], ["Pallof press", "Core"],
-  ["Farmer carry", "Core"], ["Cable crunch", "Core"],
-  ["Biceps curl", "Armen"], ["Triceps pushdown", "Armen"], ["Lateral raise", "Armen"],
-];
-
 try {
-  for (const [name, category] of EXERCISES) {
-    await pool.query("INSERT INTO exercises (name, category) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING", [name, category]);
-  }
+  // Bibliotheek: nieuwe oefeningen toevoegen, bestaande bibliotheekoefeningen bijwerken.
+  const L = EXERCISE_LIBRARY;
+  const res = await pool.query(
+    `INSERT INTO exercises (name, category, region, equipment, purpose, level, muscles, cues, built_in)
+     SELECT * , true FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::int[], $7::text[], $8::text[])
+     ON CONFLICT (name) DO UPDATE SET
+       category = EXCLUDED.category, region = EXCLUDED.region, equipment = EXCLUDED.equipment,
+       purpose = EXCLUDED.purpose, level = EXCLUDED.level, muscles = EXCLUDED.muscles,
+       cues = EXCLUDED.cues, built_in = true`,
+    ["name", "category", "region", "equipment", "purpose", "level", "muscles", "cues"].map((k) => L.map((e) => e[k])),
+  );
+  console.log(`Oefenbibliotheek: ${res.rowCount} oefeningen bijgewerkt.`);
 
   const { rows } = await pool.query("SELECT count(*)::int AS n FROM users");
   const { TRAINER_EMAIL, TRAINER_NAME, TRAINER_PASSWORD } = process.env;

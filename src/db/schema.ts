@@ -27,6 +27,18 @@ export const exercises = pgTable("exercises", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   category: text("category").notNull().default("Overig"),
+  /** Lichaamsregio waar de oefening vooral op aangrijpt (Knie, Heup, Schouder, …). */
+  region: text("region"),
+  /** Benodigd materiaal (Lichaamsgewicht, Dumbbell, Elastiek, …). */
+  equipment: text("equipment"),
+  /** "revalidatie", "kracht" of "beide". */
+  purpose: text("purpose", { enum: ["revalidatie", "kracht", "beide"] }),
+  /** 1 = basis, 2 = gevorderd, 3 = zwaar/complex. */
+  level: integer("level"),
+  muscles: text("muscles"),
+  cues: text("cues"),
+  /** true voor oefeningen uit de meegeleverde bibliotheek; die worden bij elke start bijgewerkt. */
+  builtIn: boolean("built_in").notNull().default(false),
 });
 
 export const programs = pgTable(

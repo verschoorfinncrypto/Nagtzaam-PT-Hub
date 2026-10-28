@@ -289,10 +289,29 @@ export async function stopProgram(form: FormData) {
 
 export async function addExercise(_: FormResult, form: FormData): Promise<FormResult> {
   await requireUser("trainer");
+  const str = (k: string, max: number) => String(form.get(k) ?? "").trim().slice(0, max) || null;
   const name = String(form.get("name") ?? "").trim();
-  const category = String(form.get("category") ?? "").trim() || "Overig";
+  const category = str("category", 60) ?? "Overig";
+  const purposeRaw = String(form.get("purpose") ?? "");
+  const purpose = (["revalidatie", "kracht", "beide"] as const).find((p) => p === purposeRaw) ?? null;
+  const levelNum = Number(form.get("level"));
+  const level = [1, 2, 3].includes(levelNum) ? levelNum : null;
   if (name.length < 2 || name.length > 80) return { error: "Vul een naam in (2–80 tekens)." };
-  const res = await db.insert(exercises).values({ name, category }).onConflictDoNothing().returning({ id: exercises.id });
+  const res = await db
+    .insert(exercises)
+    .values({
+      name,
+      category,
+      region: str("region", 60),
+      equipment: str("equipment", 60),
+      purpose,
+      level,
+      muscles: str("muscles", 200),
+      cues: str("cues", 600),
+      builtIn: false,
+    })
+    .onConflictDoNothing()
+    .returning({ id: exercises.id });
   if (!res.length) return { error: "Die oefening bestaat al." };
   revalidatePath("/trainer/exercises");
   return { ok: `${name} toegevoegd.` };

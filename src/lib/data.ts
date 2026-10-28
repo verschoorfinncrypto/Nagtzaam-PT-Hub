@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 import {
   bodyWeights,
   db,
@@ -15,6 +15,55 @@ import { daysAgo, e1rm, weekStart } from "./format";
 
 export async function getExercises() {
   return db.select().from(exercises).orderBy(asc(exercises.category), asc(exercises.name));
+}
+
+/** Voor de kiezers in schema en logger: alleen wat de client nodig heeft. */
+export async function getExerciseOptions() {
+  return db
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      region: exercises.region,
+      purpose: exercises.purpose,
+      cues: exercises.cues,
+    })
+    .from(exercises)
+    .orderBy(asc(exercises.name));
+}
+
+export type ExerciseFilter = { q?: string; cat?: string; region?: string; purpose?: string; equipment?: string; level?: string };
+
+export async function searchExercises(f: ExerciseFilter) {
+  const conds = [];
+  if (f.q?.trim()) {
+    const like = `%${f.q.trim().replace(/[%_\\]/g, (m) => "\\" + m)}%`;
+    conds.push(or(ilike(exercises.name, like), ilike(exercises.muscles, like), ilike(exercises.cues, like)));
+  }
+  if (f.cat) conds.push(eq(exercises.category, f.cat));
+  if (f.region) conds.push(eq(exercises.region, f.region));
+  if (f.equipment) conds.push(eq(exercises.equipment, f.equipment));
+  if (f.purpose === "revalidatie") conds.push(inArray(exercises.purpose, ["revalidatie", "beide"]));
+  if (f.purpose === "kracht") conds.push(inArray(exercises.purpose, ["kracht", "beide"]));
+  if (f.level && /^[123]$/.test(f.level)) conds.push(eq(exercises.level, Number(f.level)));
+  return db
+    .select()
+    .from(exercises)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(asc(exercises.category), asc(exercises.name));
+}
+
+/** De waarden die voorkomen, voor de filtermenu's. */
+export async function getExerciseFacets() {
+  const rows = await db
+    .select({ category: exercises.category, region: exercises.region, equipment: exercises.equipment })
+    .from(exercises);
+  const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, "nl"));
+  return {
+    categories: uniq(rows.map((r) => r.category)),
+    regions: uniq(rows.map((r) => r.region)),
+    equipment: uniq(rows.map((r) => r.equipment)),
+  };
 }
 
 export type ProgramWithDays = NonNullable<Awaited<ReturnType<typeof getActiveProgram>>>;
@@ -35,6 +84,7 @@ export async function getActiveProgram(clientId: number) {
           dayId: programExercises.dayId,
           exerciseId: programExercises.exerciseId,
           exerciseName: exercises.name,
+          cues: exercises.cues,
           position: programExercises.position,
           sets: programExercises.sets,
           reps: programExercises.reps,

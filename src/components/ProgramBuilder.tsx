@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveProgram } from "@/lib/actions";
+import { ExerciseDatalist, ExercisePicker, type PickerExercise } from "./ExercisePicker";
 
-type Exercise = { id: number; name: string; category: string };
+type Exercise = PickerExercise;
 type Item = { key: number; exerciseId: number | ""; sets: string; reps: string; load: string; notes: string };
 type Day = { key: number; name: string; items: Item[] };
 
@@ -45,12 +46,6 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
   );
   const [state, action] = useFormState(saveProgram, {});
 
-  const byCategory = useMemo(() => {
-    const m = new Map<string, Exercise[]>();
-    for (const e of exercises) m.set(e.category, [...(m.get(e.category) ?? []), e]);
-    return [...m.entries()];
-  }, [exercises]);
-
   const payload = JSON.stringify(
     days.map((d) => ({
       name: d.name,
@@ -74,6 +69,7 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
     <form action={action} className="stack">
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="payload" value={payload} />
+      <ExerciseDatalist id="exercise-list" exercises={exercises} />
       <section className="card">
         <label className="field">
           <span className="label">Naam van het schema</span>
@@ -109,19 +105,14 @@ export function ProgramBuilder({ clientId, exercises, initial }: { clientId: num
                 {d.items.map((it, ii) => (
                   <tr key={it.key}>
                     <td>
-                      <select
-                        className="compact"
-                        aria-label={`Oefening ${ii + 1}`}
+                      <ExercisePicker
+                        compact
+                        listId="exercise-list"
+                        exercises={exercises}
+                        ariaLabel={`Oefening ${ii + 1}`}
                         value={it.exerciseId}
-                        onChange={(e) => setItem(d.key, it.key, { exerciseId: e.target.value ? Number(e.target.value) : "" })}
-                      >
-                        <option value="">Kies…</option>
-                        {byCategory.map(([cat, list]) => (
-                          <optgroup key={cat} label={cat}>
-                            {list.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                          </optgroup>
-                        ))}
-                      </select>
+                        onChange={(id) => setItem(d.key, it.key, { exerciseId: id })}
+                      />
                     </td>
                     <td><input className="compact" style={{ width: 64 }} inputMode="numeric" aria-label="Sets" value={it.sets} onChange={(e) => setItem(d.key, it.key, { sets: e.target.value })} /></td>
                     <td><input className="compact" style={{ width: 80 }} aria-label="Reps" value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>

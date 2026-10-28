@@ -9,11 +9,12 @@ const CLIENT_NAV = [
   { href: "/schema", label: "Mijn schema" },
   { href: "/weight", label: "Gewicht" },
   { href: "/progress", label: "Voortgang" },
+  { href: "/exercises", label: "Oefeningen" },
 ];
 
 const TRAINER_NAV = [
   { href: "/trainer", label: "Cliënten" },
-  { href: "/trainer/exercises", label: "Oefeningen" },
+  { href: "/exercises", label: "Oefeningen" },
   { href: "/trainer/team", label: "Team" },
 ];
 
