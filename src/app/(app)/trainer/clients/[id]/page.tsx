@@ -5,7 +5,7 @@ import { ProgramDays, RecentWorkouts, WeightCard, WeightForm } from "@/component
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
 import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
-import { getActiveProgram, getBodyWeights, getWorkouts } from "@/lib/data";
+import { getActiveProgram, getBodyWeights, getTrainers, getWorkouts } from "@/lib/data";
 
 export const metadata = { title: "Cliënt" };
 
@@ -18,11 +18,13 @@ export default async function ClientPage({
 }) {
   await requireUser("trainer");
   const { client } = await requireClientAccess(Number(params.id));
-  const [program, weights, recent] = await Promise.all([
+  const [program, weights, recent, trainers] = await Promise.all([
     getActiveProgram(client.id),
     getBodyWeights(client.id, 365),
     getWorkouts(client.id, 8),
+    getTrainers(),
   ]);
+  const trainerName = trainers.find((t) => t.id === client.trainerId)?.name;
   const email = displayEmail(client.email);
   const canLogin = hasLogin(client);
 
@@ -35,6 +37,9 @@ export default async function ClientPage({
           <p className="muted">
             {client.goal ?? email ?? "Geen e-mailadres"}{" "}
             {!canLogin && <span className="tag">Geen login</span>}
+          </p>
+          <p className="body-sm">
+            Trainer: {trainerName ? <b>{trainerName}</b> : <span className="tag tag-alert">Nog niet gekoppeld</span>}
           </p>
         </div>
         <div className="actions">
@@ -109,6 +114,13 @@ export default async function ClientPage({
                 <option value="">Onbekend</option>
                 <option value="fysio">Doorgestroomd vanuit fysiotherapie</option>
                 <option value="extern">Van buiten de praktijk</option>
+              </select>
+            </label>
+            <label className="field">
+              <span className="label">Trainer</span>
+              <select name="trainerId" defaultValue={client.trainerId ?? ""}>
+                {trainers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <option value="">Nog niet gekoppeld</option>
               </select>
             </label>
             <label className="field">

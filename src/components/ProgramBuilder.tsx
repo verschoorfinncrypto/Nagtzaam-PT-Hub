@@ -92,6 +92,7 @@ function QuickAdd({
 
 export function ProgramBuilder({
   clients,
+  meId,
   clientId,
   exercises: initialExercises,
   categories,
@@ -99,7 +100,8 @@ export function ProgramBuilder({
   activeByClient,
   returnTo,
 }: {
-  clients: { id: number; name: string }[];
+  clients: { id: number; name: string; trainerId: number | null; trainerName: string | null }[];
+  meId: number;
   clientId?: number;
   exercises: Exercise[];
   categories: string[];
@@ -168,7 +170,16 @@ export function ProgramBuilder({
             <span className="label">Cliënt</span>
             <select value={client} onChange={(e) => setClient(e.target.value ? Number(e.target.value) : "")} required>
               <option value="">Kies een cliënt…</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {clients.some((c) => c.trainerId === meId) && (
+                <optgroup label="Mijn cliënten">
+                  {clients.filter((c) => c.trainerId === meId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              )}
+              <optgroup label="Overige cliënten">
+                {clients.filter((c) => c.trainerId !== meId).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} · {c.trainerName ?? "nog niet gekoppeld"}</option>
+                ))}
+              </optgroup>
             </select>
           </label>
           <label className="field">

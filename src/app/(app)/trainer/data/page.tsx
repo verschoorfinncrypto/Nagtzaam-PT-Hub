@@ -224,11 +224,7 @@ export default async function DataPage() {
                     {s.attention.map((c) => (
                       <tr key={c.id}>
                         <td>
-                          {c.trainerId === me.id ? (
-                            <Link href={`/trainer/clients/${c.id}`} style={{ fontWeight: 600 }}>{c.name}</Link>
-                          ) : (
-                            <span style={{ fontWeight: 600 }}>{c.name}</span>
-                          )}
+                          <Link href={`/trainer/clients/${c.id}`} style={{ fontWeight: 600 }}>{c.name}</Link>
                         </td>
                         <td>{c.trainer}</td>
                         <td>{c.last ? shortDate(c.last) : <span className="tag tag-alert">Nog nooit</span>}</td>

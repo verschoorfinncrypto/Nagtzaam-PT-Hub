@@ -2,11 +2,13 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { createClient } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
+import { getTrainers } from "@/lib/data";
 
 export const metadata = { title: "Cliënt toevoegen" };
 
 export default async function NewClient() {
-  await requireUser("trainer");
+  const me = await requireUser("trainer");
+  const trainers = await getTrainers();
   return (
     <>
       <div className="page-head">
@@ -32,6 +34,15 @@ export default async function NewClient() {
               Leeg laten = de cliënt kan nog niet zelf inloggen. Je beheert alles zelf en kunt via &quot;Bekijk als cliënt&quot; de
               hub testen zoals de cliënt hem ziet. Later stel je op de cliëntpagina alsnog een e-mail en wachtwoord in (minstens 10 tekens).
             </span>
+          </label>
+          <label className="field">
+            <span className="label">Trainer</span>
+            <select name="trainerId" defaultValue={me.id}>
+              {trainers.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}{t.id === me.id ? " (jij)" : ""}</option>
+              ))}
+              <option value="">Nog niet gekoppeld</option>
+            </select>
           </label>
           <label className="field">
             <span className="label">Herkomst</span>

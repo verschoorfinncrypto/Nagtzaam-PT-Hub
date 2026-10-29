@@ -166,6 +166,24 @@ const newClientSchema = z.object({
   goal: z.string().trim().max(300).optional(),
 });
 
+/** Trainer uit een formulier: een bestaande trainer, of null voor "nog niet gekoppeld". */
+async function parseTrainerId(v: FormDataEntryValue | null): Promise<number | null | "invalid"> {
+  if (v === null || v === "") return null;
+  const id = Number(v);
+  const [t] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, id), eq(users.role, "trainer"))).limit(1);
+  return t ? t.id : "invalid";
+}
+
+/** Cliënt aan een (andere) trainer koppelen; direct vanuit de cliëntenlijst. */
+export async function assignTrainer(form: FormData) {
+  await requireUser("trainer");
+  const { client } = await requireClientAccess(Number(form.get("clientId")));
+  const trainerId = await parseTrainerId(form.get("trainerId"));
+  if (trainerId === "invalid") return;
+  await db.update(users).set({ trainerId }).where(eq(users.id, client.id));
+  revalidatePath("/", "layout");
+}
+
 function parseSource(v: FormDataEntryValue | null) {
   return v === "fysio" || v === "extern" ? v : null;
 }
@@ -183,6 +201,7 @@ export async function createClient(_: FormResult, form: FormData): Promise<FormR
   const d = parsed.data;
   if (d.password && !d.email) return { error: "Vul ook een e-mailadres in: daarmee logt de cliënt in." };
   const email = d.email ?? `client-${crypto.randomUUID().slice(0, 12)}${NO_EMAIL_DOMAIN}`;
+  const chosenTrainer = await parseTrainerId(form.get("trainerId"));
   const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (exists) return { error: "Er bestaat al een account met dit e-mailadres." };
   const [c] = await db
@@ -192,7 +211,7 @@ export async function createClient(_: FormResult, form: FormData): Promise<FormR
       email,
       passwordHash: d.password ? await hashPassword(d.password) : NO_LOGIN,
       role: "client",
-      trainerId: trainer.id,
+      trainerId: form.has("trainerId") ? (chosenTrainer === "invalid" ? trainer.id : chosenTrainer) : trainer.id,
       goal: d.goal ?? null,
       source: parseSource(form.get("source")),
     })
@@ -203,9 +222,9 @@ export async function createClient(_: FormResult, form: FormData): Promise<FormR
 
 /** Cliënt definitief verwijderen, met al zijn trainingen, schema's en metingen (cascade in de database). */
 export async function deleteClient(form: FormData) {
-  const trainer = await requireUser("trainer");
+  await requireUser("trainer");
   const { client } = await requireClientAccess(Number(form.get("clientId")));
-  await db.delete(users).where(and(eq(users.id, client.id), eq(users.role, "client"), eq(users.trainerId, trainer.id)));
+  await db.delete(users).where(and(eq(users.id, client.id), eq(users.role, "client")));
   revalidatePath("/", "layout");
   redirect(`/trainer?deleted=${encodeURIComponent(client.name)}`);
 }
@@ -241,6 +260,7 @@ export async function updateClient(_: FormResult, form: FormData): Promise<FormR
   if (name.length < 2) return { error: "Vul een naam in." };
   if (password && password.length < 10) return { error: "Een nieuw wachtwoord moet minstens 10 tekens zijn." };
   const [cur] = await db.select().from(users).where(eq(users.id, clientId)).limit(1);
+  const trainerId = await parseTrainerId(form.get("trainerId"));
   let email = cur.email;
   if (emailRaw && emailRaw !== cur.email) {
     if (!z.string().email().safeParse(emailRaw).success) return { error: "Vul een geldig e-mailadres in." };
@@ -251,7 +271,7 @@ export async function updateClient(_: FormResult, form: FormData): Promise<FormR
   if (password && email.endsWith(NO_EMAIL_DOMAIN)) return { error: "Vul ook een e-mailadres in: daarmee logt de cliënt in." };
   await db
     .update(users)
-    .set({ name, email, goal: goal || null, source: parseSource(form.get("source")), ...(password ? { passwordHash: await hashPassword(password) } : {}) })
+    .set({ name, email, goal: goal || null, source: parseSource(form.get("source")), ...(form.has("trainerId") && trainerId !== "invalid" ? { trainerId } : {}), ...(password ? { passwordHash: await hashPassword(password) } : {}) })
     .where(eq(users.id, clientId));
   revalidatePath(`/trainer/clients/${clientId}`);
   return { ok: password ? `Opgeslagen. ${name} kan nu inloggen met ${email}.` : "Opgeslagen." };

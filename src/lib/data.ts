@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   bodyWeights,
   db,
@@ -275,7 +276,42 @@ export async function getLastSets(clientId: number) {
   return out;
 }
 
-export async function getClients(trainerId: number) {
+/** Filter op trainer: een trainer-id, "all" (hele praktijk) of "none" (nog niet gekoppeld). */
+export type TrainerFilter = number | "all" | "none";
+
+/** Leest ?trainer= uit de URL. Zonder parameter: de eigen cliënten van de ingelogde trainer. */
+export function parseTrainerFilter(v: string | undefined, meId: number): TrainerFilter {
+  if (v === "all" || v === "none") return v;
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : meId;
+}
+
+function trainerCond(f: TrainerFilter) {
+  if (f === "all") return undefined;
+  if (f === "none") return isNull(users.trainerId);
+  return eq(users.trainerId, f);
+}
+
+export async function getTrainers() {
+  return db
+    .select({
+      id: users.id,
+      name: users.name,
+      clients: sql<number>`(select count(*) from users c where c.trainer_id = "users"."id" and c.role = 'client')::int`,
+    })
+    .from(users)
+    .where(eq(users.role, "trainer"))
+    .orderBy(asc(users.name));
+}
+
+export async function countUnassigned() {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(users).where(and(eq(users.role, "client"), isNull(users.trainerId)));
+  return r?.n ?? 0;
+}
+
+const trainerUser = alias(users, "trainer_user");
+
+export async function getClients(filter: TrainerFilter) {
   const clients = await db
     .select({
       id: users.id,
@@ -283,10 +319,14 @@ export async function getClients(trainerId: number) {
       email: users.email,
       goal: users.goal,
       createdAt: users.createdAt,
-      canLogin: sql<boolean>`${users.passwordHash} like '$2%'`,
+      // Volledig gekwalificeerd i.v.m. de join met trainer_user.
+      canLogin: sql<boolean>`"users"."password_hash" like '$2%'`,
+      trainerId: users.trainerId,
+      trainerName: trainerUser.name,
     })
     .from(users)
-    .where(and(eq(users.trainerId, trainerId), eq(users.role, "client")))
+    .leftJoin(trainerUser, eq(trainerUser.id, users.trainerId))
+    .where(and(eq(users.role, "client"), trainerCond(filter)))
     .orderBy(asc(users.name));
   if (!clients.length) return [];
   const ids = clients.map((c) => c.id);
@@ -322,20 +362,24 @@ export async function getClients(trainerId: number) {
   }));
 }
 
-/** Cliënten van deze trainer met hun actieve schema (of null), voor het tabblad Schema's. */
-export async function getTrainerPrograms(trainerId: number) {
+/** Cliënten (gefilterd op trainer) met hun actieve schema (of null), voor het tabblad Schema's. */
+export async function getTrainerPrograms(filter: TrainerFilter) {
+  const cond = filter === "all" ? sql`true` : filter === "none" ? sql`u.trainer_id is null` : sql`u.trainer_id = ${filter}`;
   const r = await db.execute(sql`
-    select u.id as client_id, u.name as client_name,
+    select u.id as client_id, u.name as client_name, u.trainer_id, t.name as trainer_name,
            p.id as program_id, p.name as program_name, (p.created_at at time zone 'Europe/Amsterdam')::date::text as created,
            (select count(*) from program_days d where d.program_id = p.id)::int as days,
            (select count(*) from program_exercises e join program_days d on d.id = e.day_id where d.program_id = p.id)::int as exercises
     from users u
+    left join users t on t.id = u.trainer_id
     left join programs p on p.client_id = u.id and p.active
-    where u.role = 'client' and u.trainer_id = ${trainerId}
+    where u.role = 'client' and ${cond}
     order by (p.id is null), u.name`);
   return r.rows as {
     client_id: number;
     client_name: string;
+    trainer_id: number | null;
+    trainer_name: string | null;
     program_id: number | null;
     program_name: string | null;
     created: string | null;

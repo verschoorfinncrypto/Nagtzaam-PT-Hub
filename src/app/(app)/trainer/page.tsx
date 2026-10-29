@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { DeleteClientButton } from "@/components/DeleteClientButton";
+import { AssignTrainerSelect, TrainerFilterBar } from "@/components/TrainerFilter";
 import { requireUser } from "@/lib/auth";
-import { getClients } from "@/lib/data";
+import { countUnassigned, getClients, getTrainers, parseTrainerFilter } from "@/lib/data";
 import { daysAgo, kg, shortDate } from "@/lib/format";
 
 export const metadata = { title: "Cliënten" };
 
-export default async function TrainerHome({ searchParams }: { searchParams: { deleted?: string } }) {
+export default async function TrainerHome({ searchParams }: { searchParams: { deleted?: string; trainer?: string } }) {
   const me = await requireUser("trainer");
-  const clients = await getClients(me.id);
+  const filter = parseTrainerFilter(searchParams.trainer, me.id);
+  const [clients, trainers, unassigned] = await Promise.all([getClients(filter), getTrainers(), countUnassigned()]);
+  const total = trainers.reduce((n, t) => n + t.clients, 0) + unassigned;
+  const filterName =
+    filter === "all" ? "Alle cliënten" : filter === "none" ? "Nog niet gekoppeld" : filter === me.id ? "Mijn cliënten" : `Cliënten van ${trainers.find((t) => t.id === filter)?.name ?? "onbekende trainer"}`;
   const stale = daysAgo(10);
   const active = clients.filter((c) => c.workoutsThisWeek > 0).length;
 
@@ -16,7 +21,7 @@ export default async function TrainerHome({ searchParams }: { searchParams: { de
     <>
       <div className="page-head">
         <div>
-          <p className="label">Trainer</p>
+          <p className="label">{filterName}</p>
           <h1 className="h1">Cliënten</h1>
         </div>
         <Link href="/trainer/clients/new" className="btn btn-primary">Cliënt toevoegen</Link>
@@ -25,6 +30,8 @@ export default async function TrainerHome({ searchParams }: { searchParams: { de
       {searchParams.deleted && (
         <p className="notice" role="status">{searchParams.deleted.slice(0, 100)} is verwijderd, met alle bijbehorende gegevens.</p>
       )}
+
+      <TrainerFilterBar basePath="/trainer" trainers={trainers} meId={me.id} current={filter} total={total} unassigned={unassigned} />
 
       <div className="grid grid-3">
         <div className="stat"><span className="label">Cliënten</span><span className="metric">{clients.length}</span></div>
@@ -38,13 +45,17 @@ export default async function TrainerHome({ searchParams }: { searchParams: { de
       <section className="card">
         {clients.length === 0 ? (
           <div className="empty">
-            Nog geen cliënten. <Link href="/trainer/clients/new">Voeg je eerste cliënt toe</Link>.
+            {filter === me.id ? (
+              <>Je hebt nog geen eigen cliënten. <Link href="/trainer/clients/new">Voeg een cliënt toe</Link> of bekijk <Link href="/trainer?trainer=all">alle cliënten</Link>.</>
+            ) : (
+              "Geen cliënten bij dit filter."
+            )}
           </div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Naam</th><th>Schema</th><th>Laatste training</th><th>7 dagen</th><th>Gewicht</th><th aria-label="Verwijderen" /></tr>
+                <tr><th>Naam</th><th>Trainer</th><th>Schema</th><th>Laatste training</th><th>7 dagen</th><th>Gewicht</th><th aria-label="Verwijderen" /></tr>
               </thead>
               <tbody>
                 {clients.map((c) => (
@@ -53,6 +64,9 @@ export default async function TrainerHome({ searchParams }: { searchParams: { de
                       <Link href={`/trainer/clients/${c.id}`} style={{ fontWeight: 600 }}>{c.name}</Link>
                       {c.goal && <><br /><span className="body-sm muted">{c.goal}</span></>}
                       {!c.canLogin && <> <span className="tag">Geen login</span></>}
+                    </td>
+                    <td>
+                      <AssignTrainerSelect clientId={c.id} clientName={c.name} trainerId={c.trainerId} trainers={trainers} />
                     </td>
                     <td>{c.program ?? <span className="tag tag-alert">Geen schema</span>}</td>
                     <td>

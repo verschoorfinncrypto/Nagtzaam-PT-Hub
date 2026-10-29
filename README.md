@@ -11,7 +11,8 @@ Webapp waarin trainers en cliënten trainingen, lichaamsgewicht, schema's en PR'
 - **Data** (`/trainer/data`, voor alle trainers): overzicht van de hele praktijk: aantal en groei van cliënten, aandeel vanuit fysio (herkomst per cliënt), actieve cliënten, behoud na 4 weken, trainingen per week, PR's, gewicht bijhouden, cijfers per trainer, meest getrainde oefeningen en wie aandacht nodig heeft.
 - **Cliënten verwijderen** met het prullenbakje in de cliëntenlijst of op de cliëntpagina, na bevestiging. Definitief: trainingen, schema's en metingen van die cliënt worden mee verwijderd.
 - **Beheerder**: precies één trainer (`ADMIN_EMAIL`, anders `TRAINER_EMAIL`) beheert onder Team de trainers: toevoegen, wachtwoord resetten, verwijderen (cliënten gaan dan naar een gekozen trainer). Wordt bij elke start opnieuw gezet. Andere trainers hebben verder dezelfde functies.
-- Een trainer ziet alleen de eigen cliënten; een cliënt alleen zichzelf.
+- **Cliënten per trainer**: elke cliënt is gekoppeld aan een trainer (te kiezen bij aanmaken, op de cliëntpagina of direct in de cliëntenlijst). Alle trainers zien alle cliënten van de praktijk en filteren op *Mijn cliënten*, *Alle*, *Nog niet gekoppeld* of een specifieke trainer (cliëntenlijst en Schema's).
+- Een cliënt ziet alleen zichzelf.
 
 Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessies via een ondertekende cookie (jose), wachtwoorden met bcrypt. Styling volgt het design system *Nagtzaam PT Hub*.
 

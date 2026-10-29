@@ -8,14 +8,16 @@ export const metadata = { title: "Schema bouwen" };
 export default async function NewSchemaPage({ searchParams }: { searchParams: { client?: string } }) {
   const me = await requireUser("trainer");
   const clientId = searchParams.client ? Number(searchParams.client) : undefined;
-  if (clientId) await requireClientAccess(clientId); // alleen eigen cliënten
+  if (clientId) await requireClientAccess(clientId); // bestaande cliënt
   const [exercises, facets, programs, program] = await Promise.all([
     getExerciseOptions(),
     getExerciseFacets(),
-    getTrainerPrograms(me.id),
+    getTrainerPrograms("all"),
     clientId ? getActiveProgram(clientId) : Promise.resolve(null),
   ]);
-  const clients = programs.map((p) => ({ id: p.client_id, name: p.client_name })).sort((a, b) => a.name.localeCompare(b.name, "nl"));
+  const clients = programs
+    .map((p) => ({ id: p.client_id, name: p.client_name, trainerId: p.trainer_id, trainerName: p.trainer_name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "nl"));
   const activeByClient = Object.fromEntries(programs.filter((p) => p.program_name).map((p) => [p.client_id, p.program_name as string]));
   const initial: ProgramInit | undefined = program
     ? {
@@ -53,6 +55,7 @@ export default async function NewSchemaPage({ searchParams }: { searchParams: { 
         <ProgramBuilder
           key={clientId ?? "new"}
           clients={clients}
+          meId={me.id}
           clientId={clientId}
           exercises={exercises}
           categories={facets.categories}

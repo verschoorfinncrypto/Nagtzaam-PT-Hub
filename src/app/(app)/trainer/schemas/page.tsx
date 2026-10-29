@@ -1,14 +1,21 @@
 import Link from "next/link";
+import { TrainerFilterBar } from "@/components/TrainerFilter";
 import { requireUser } from "@/lib/auth";
-import { getTrainerPrograms } from "@/lib/data";
+import { countUnassigned, getTrainerPrograms, getTrainers, parseTrainerFilter } from "@/lib/data";
 import { shortDate } from "@/lib/format";
 
 export const metadata = { title: "Schema's" };
 
-export default async function SchemasPage({ searchParams }: { searchParams: { saved?: string } }) {
+export default async function SchemasPage({ searchParams }: { searchParams: { saved?: string; trainer?: string } }) {
   const me = await requireUser("trainer");
-  const list = await getTrainerPrograms(me.id);
-  const saved = searchParams.saved ? list.find((r) => r.client_id === Number(searchParams.saved)) : undefined;
+  const filter = parseTrainerFilter(searchParams.trainer, me.id);
+  const [list, all, trainers, unassigned] = await Promise.all([
+    getTrainerPrograms(filter),
+    getTrainerPrograms("all"),
+    getTrainers(),
+    countUnassigned(),
+  ]);
+  const saved = searchParams.saved ? all.find((r) => r.client_id === Number(searchParams.saved)) : undefined;
   const withProgram = list.filter((r) => r.program_id);
   const without = list.filter((r) => !r.program_id);
 
@@ -30,21 +37,28 @@ export default async function SchemasPage({ searchParams }: { searchParams: { sa
         </p>
       )}
 
+      <TrainerFilterBar basePath="/trainer/schemas" trainers={trainers} meId={me.id} current={filter} total={all.length} unassigned={unassigned} />
+
       {list.length === 0 ? (
         <div className="empty">
-          Nog geen cliënten. <Link href="/trainer/clients/new">Voeg eerst een cliënt toe</Link>.
+          {all.length === 0 ? (
+            <>Nog geen cliënten. <Link href="/trainer/clients/new">Voeg eerst een cliënt toe</Link>.</>
+          ) : (
+            <>Geen cliënten bij dit filter. <Link href="/trainer/schemas?trainer=all">Toon alle cliënten</Link>.</>
+          )}
         </div>
       ) : (
         <section className="card">
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Cliënt</th><th>Schema</th><th>Dagen</th><th>Oefeningen</th><th>Sinds</th><th aria-label="Acties" /></tr>
+                <tr><th>Cliënt</th><th>Trainer</th><th>Schema</th><th>Dagen</th><th>Oefeningen</th><th>Sinds</th><th aria-label="Acties" /></tr>
               </thead>
               <tbody>
                 {list.map((r) => (
                   <tr key={r.client_id}>
                     <td><Link href={`/trainer/clients/${r.client_id}`} style={{ fontWeight: 600 }}>{r.client_name}</Link></td>
+                    <td>{r.trainer_name ?? <span className="muted">nog niet gekoppeld</span>}</td>
                     <td>{r.program_name ?? <span className="tag tag-alert">Geen schema</span>}</td>
                     <td>{r.program_id ? r.days : "–"}</td>
                     <td>{r.program_id ? r.exercises : "–"}</td>

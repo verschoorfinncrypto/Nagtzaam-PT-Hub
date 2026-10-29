@@ -51,8 +51,11 @@ export const currentUser = cache(async (): Promise<User | null> => {
   if (!s) return null;
   const [u] = await db.select().from(users).where(eq(users.id, s.uid)).limit(1);
   if (!u || u.role !== s.role) return null;
-  // Een "bekijk als cliënt"-sessie is alleen geldig zolang de cliënt nog bij die trainer hoort.
-  if (s.by && u.trainerId !== s.by) return null;
+  // Een "bekijk als cliënt"-sessie is alleen geldig zolang de trainer die meekijkt nog bestaat.
+  if (s.by) {
+    const [t] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, s.by), eq(users.role, "trainer"))).limit(1);
+    if (!t) return null;
+  }
   return u;
 });
 
@@ -78,7 +81,7 @@ export async function requireAdmin() {
   return u;
 }
 
-/** De cliënt waarvan de ingelogde gebruiker de gegevens mag zien: zichzelf, of een cliënt van deze trainer. */
+/** De cliënt waarvan de ingelogde gebruiker de gegevens mag zien: een cliënt ziet zichzelf, trainers zien alle cliënten van de praktijk. */
 export async function requireClientAccess(clientId: number) {
   const u = await requireUser();
   if (u.role === "client") {
@@ -88,7 +91,7 @@ export async function requireClientAccess(clientId: number) {
   const [c] = await db
     .select()
     .from(users)
-    .where(and(eq(users.id, clientId), eq(users.trainerId, u.id), eq(users.role, "client")))
+    .where(and(eq(users.id, clientId), eq(users.role, "client")))
     .limit(1);
   if (!c) notFound();
   return { viewer: u, client: c };
