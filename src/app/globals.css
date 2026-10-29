@@ -282,3 +282,15 @@ table.builder td { padding-right: 8px; }
 .ex-suggest li.active { background: var(--brand-tint); }
 .ex-suggest-name { font-weight: 600; font-size: 15px; line-height: 20px; }
 .ex-suggest-meta { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+
+/* Uitlegvideo */
+.ex-links { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; margin-top: 2px; }
+.video-link { display: inline-block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--positive); text-decoration: none; margin-top: 4px; }
+.video-link:hover { text-decoration: underline; }
+.video-form { margin-top: 4px; gap: 8px; }
+
+/* Menubalk altijd op één regel; bij weinig ruimte horizontaal scrollen */
+.nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a { white-space: nowrap; }
+@media (max-width: 1240px) { .nav a { padding: 8px 10px; font-size: 14px; } .brand span { display: none; } }

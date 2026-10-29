@@ -2,6 +2,7 @@ import Link from "next/link";
 import { addWeight, deleteWeight } from "@/lib/actions";
 import type { PR, ProgramWithDays } from "@/lib/data";
 import { kg, shortDate, today } from "@/lib/format";
+import { videoHref } from "@/lib/video";
 import { ActionForm } from "./ActionForm";
 import { BarChart, LineChart } from "./charts";
 
@@ -185,7 +186,7 @@ export function ProgramDays({
           </div>
           <table>
             <thead>
-              <tr><th>Oefening</th><th>Sets × reps</th><th>RPE</th><th>Rust</th><th>Belasting</th></tr>
+              <tr><th>Oefening</th><th>Sets × reps</th><th>RPE</th><th>Rust</th><th>Pijngrens</th><th>Belasting</th></tr>
             </thead>
             <tbody>
               {d.items.map((it) => (
@@ -193,6 +194,11 @@ export function ProgramDays({
                   <td>
                     {it.exerciseName}
                     {it.notes && <><br /><span className="body-sm muted">{it.notes}</span></>}
+                    <span className="ex-links">
+                      <a className="video-link" href={videoHref(it.exerciseName, it.videoUrl)} target="_blank" rel="noopener noreferrer">
+                        ▶ Uitlegvideo
+                      </a>
+                    </span>
                     {it.cues && (
                       <details className="cue">
                         <summary>Uitvoering</summary>
@@ -203,6 +209,7 @@ export function ProgramDays({
                   <td style={{ whiteSpace: "nowrap" }}>{it.sets} × {it.reps}</td>
                   <td>{it.rpe || <span className="muted">–</span>}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{it.rest || <span className="muted">–</span>}</td>
+                  <td>{it.painLimit || <span className="muted">–</span>}</td>
                   <td>{it.load || <span className="muted">zelf kiezen</span>}</td>
                 </tr>
               ))}

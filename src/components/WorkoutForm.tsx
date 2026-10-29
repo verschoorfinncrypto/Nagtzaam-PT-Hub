@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveWorkout } from "@/lib/actions";
+import { videoHref } from "@/lib/video";
 import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
 import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
@@ -14,7 +15,7 @@ type Previous = Record<number, { date: string; sets: { reps: number; weight: num
 export type DayTemplate = {
   id: number;
   name: string;
-  items: { exerciseId: number; sets: number; reps: string; rpe: string | null; rest: string | null; load: string | null }[];
+  items: { exerciseId: number; sets: number; reps: string; rpe: string | null; rest: string | null; painLimit: string | null; load: string | null }[];
 };
 
 let nextKey = 1;
@@ -42,6 +43,7 @@ function fromDay(day: DayTemplate | undefined, previous: Previous): Block[] {
     const parts = [`${it.sets} × ${it.reps}`];
     if (it.rpe) parts.push(`RPE ${it.rpe}`);
     if (it.rest) parts.push(`rust ${it.rest}`);
+    if (it.painLimit) parts.push(`pijngrens ${it.painLimit}`);
     parts.push(it.load ? `belasting ${it.load}` : "belasting zelf kiezen");
     return {
       key: nextKey++,
@@ -168,11 +170,18 @@ export function WorkoutForm({
             </div>
             {(() => {
               const ex = b.exerciseId !== "" ? exercises.find((e) => e.id === b.exerciseId) : undefined;
-              return ex?.cues ? (
-                <details className="cue">
-                  <summary>Uitvoering</summary>
-                  <p>{ex.cues}</p>
-                </details>
+              return ex ? (
+                <div className="ex-links">
+                  <a className="video-link" href={videoHref(ex.name, ex.videoUrl)} target="_blank" rel="noopener noreferrer">
+                    ▶ Uitlegvideo
+                  </a>
+                  {ex.cues && (
+                    <details className="cue">
+                      <summary>Uitvoering</summary>
+                      <p>{ex.cues}</p>
+                    </details>
+                  )}
+                </div>
               ) : null;
             })()}
             {(b.target || prev) && (

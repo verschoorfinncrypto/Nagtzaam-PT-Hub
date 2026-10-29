@@ -29,6 +29,7 @@ export async function getExerciseOptions() {
       purpose: exercises.purpose,
       cues: exercises.cues,
       muscles: exercises.muscles,
+      videoUrl: exercises.videoUrl,
     })
     .from(exercises)
     .orderBy(asc(exercises.name));
@@ -87,11 +88,13 @@ export async function getActiveProgram(clientId: number) {
           exerciseId: programExercises.exerciseId,
           exerciseName: exercises.name,
           cues: exercises.cues,
+          videoUrl: exercises.videoUrl,
           position: programExercises.position,
           sets: programExercises.sets,
           reps: programExercises.reps,
           rpe: programExercises.rpe,
           rest: programExercises.rest,
+          painLimit: programExercises.painLimit,
           load: programExercises.load,
           notes: programExercises.notes,
         })

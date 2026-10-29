@@ -41,6 +41,8 @@ export const exercises = pgTable("exercises", {
   level: integer("level"),
   muscles: text("muscles"),
   cues: text("cues"),
+  /** Vaste uitlegvideo (https). Leeg = de app linkt naar YouTube-zoekresultaten voor deze oefening. */
+  videoUrl: text("video_url"),
   /** true voor oefeningen uit de meegeleverde bibliotheek; die worden bij elke start bijgewerkt. */
   builtIn: boolean("built_in").notNull().default(false),
 });
@@ -77,6 +79,8 @@ export const programExercises = pgTable("program_exercises", {
   rpe: text("rpe"),
   /** Voorgeschreven rust tussen sets, bijv. "90 s" of "2 min". */
   rest: text("rest"),
+  /** Pijngrens tijdens de oefening, bijv. "max 3/10". */
+  painLimit: text("pain_limit"),
   /** Optioneel voorgeschreven belasting; leeg = cliënt kiest zelf tijdens het trainen. */
   load: text("load"),
   notes: text("notes"),

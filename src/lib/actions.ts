@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FIELD_LABELS, PROGRAM_LIMITS } from "./limits";
+import { cleanVideoUrl } from "./video";
 import {
   bodyWeights,
   db,
@@ -360,6 +361,7 @@ const programSchema = z.object({
               reps: z.string().trim().min(1).max(PROGRAM_LIMITS.reps),
               rpe: z.string().trim().max(PROGRAM_LIMITS.rpe).optional(),
               rest: z.string().trim().max(PROGRAM_LIMITS.rest).optional(),
+              painLimit: z.string().trim().max(PROGRAM_LIMITS.painLimit).optional(),
               load: z.string().trim().max(PROGRAM_LIMITS.load).optional(),
               notes: z.string().trim().max(PROGRAM_LIMITS.notes).optional(),
             }),
@@ -429,6 +431,7 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
           reps: it.reps,
           rpe: it.rpe || null,
           rest: it.rest || null,
+          painLimit: it.painLimit || null,
           load: it.load || null,
           notes: it.notes || null,
         })),
@@ -471,6 +474,7 @@ export async function addExercise(_: FormResult, form: FormData): Promise<FormRe
       level,
       muscles: str("muscles", 200),
       cues: str("cues", 600),
+      videoUrl: cleanVideoUrl(String(form.get("videoUrl") ?? "")),
       builtIn: false,
     })
     .onConflictDoNothing()
@@ -494,6 +498,7 @@ export async function quickAddExercise(nameRaw: string, categoryRaw: string) {
     purpose: exercises.purpose,
     cues: exercises.cues,
     muscles: exercises.muscles,
+    videoUrl: exercises.videoUrl,
   };
   // Bestaat al (ook met andere hoofdletters)? Dan die gebruiken.
   const findExisting = () => db.select(cols).from(exercises).where(sql`lower(${exercises.name}) = lower(${name})`).limit(1);
@@ -506,6 +511,20 @@ export async function quickAddExercise(nameRaw: string, categoryRaw: string) {
   }
   const [raced] = await findExisting();
   return raced ? ({ exercise: raced } as const) : ({ error: "Kon de oefening niet toevoegen." } as const);
+}
+
+/** Vaste uitlegvideo bij een oefening instellen of weghalen (leeg = YouTube-zoeklink). Geldt direct in alle schema's. */
+export async function setExerciseVideo(_: FormResult, form: FormData): Promise<FormResult> {
+  await requireUser("trainer");
+  const id = Number(form.get("exerciseId"));
+  const raw = String(form.get("videoUrl") ?? "");
+  const url = cleanVideoUrl(raw);
+  if (raw.trim() && !url) return { error: "Plak een volledige link, beginnend met https://" };
+  if (url && url.length > 500) return { error: "Die link is te lang." };
+  const [ex] = await db.update(exercises).set({ videoUrl: url }).where(eq(exercises.id, id)).returning({ name: exercises.name });
+  if (!ex) return { error: "Oefening niet gevonden." };
+  revalidatePath("/", "layout");
+  return { ok: url ? `Video voor ${ex.name} opgeslagen. Cliënten zien hem direct in hun schema.` : `Vaste video voor ${ex.name} verwijderd; de zoeklink wordt weer gebruikt.` };
 }
 
 /* ---------- Account ---------- */

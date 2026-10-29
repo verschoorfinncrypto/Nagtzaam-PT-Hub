@@ -10,6 +10,7 @@ export type PickerExercise = {
   purpose: string | null;
   cues: string | null;
   muscles?: string | null;
+  videoUrl?: string | null;
 };
 
 const PURPOSE_LABEL: Record<string, string> = { revalidatie: "Revalidatie", kracht: "Kracht", beide: "Reva + kracht" };

@@ -31,6 +31,7 @@ export default async function NewSchemaPage({ searchParams }: { searchParams: { 
             reps: i.reps,
             rpe: i.rpe,
             rest: i.rest,
+            painLimit: i.painLimit,
             load: i.load,
             notes: i.notes,
           })),

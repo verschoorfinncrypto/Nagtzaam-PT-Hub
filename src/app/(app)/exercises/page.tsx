@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
-import { addExercise } from "@/lib/actions";
+import { addExercise, setExerciseVideo } from "@/lib/actions";
+import { videoHref } from "@/lib/video";
 import { requireUser } from "@/lib/auth";
 import { getExerciseFacets, searchExercises, type ExerciseFilter } from "@/lib/data";
 
@@ -109,12 +110,25 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Ex
                   </summary>
                   <div className="ex-detail">
                     {e.cues && <p>{e.cues}</p>}
+                    <a className="video-link" href={videoHref(e.name, e.videoUrl)} target="_blank" rel="noopener noreferrer">
+                      ▶ {e.videoUrl ? "Uitlegvideo" : "Uitlegvideo zoeken op YouTube"}
+                    </a>
                     <dl>
                       {e.muscles && <><dt>Spieren</dt><dd>{e.muscles}</dd></>}
                       {e.equipment && <><dt>Materiaal</dt><dd>{e.equipment}</dd></>}
                       {e.level && <><dt>Niveau</dt><dd>{LEVEL_LABEL[e.level]}</dd></>}
                       {!e.builtIn && <><dt>Bron</dt><dd>Toegevoegd door een trainer</dd></>}
                     </dl>
+                    {me.role === "trainer" && (
+                      <ActionForm action={setExerciseVideo} submitLabel="Video opslaan" submitClass="btn btn-sm" className="video-form">
+                        <input type="hidden" name="exerciseId" value={e.id} />
+                        <label className="field">
+                          <span className="label">Vaste uitlegvideo (optioneel)</span>
+                          <input name="videoUrl" type="url" inputMode="url" defaultValue={e.videoUrl ?? ""} placeholder="https://www.youtube.com/watch?v=…" />
+                          <span className="hint">Leeg laten = link naar YouTube-zoekresultaten. Een vaste video verschijnt direct in alle schema&apos;s met deze oefening.</span>
+                        </label>
+                      </ActionForm>
+                    )}
                   </div>
                 </details>
               </li>
@@ -180,6 +194,10 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Ex
             <label className="field">
               <span className="label">Uitvoering</span>
               <textarea name="cues" maxLength={600} placeholder="Korte instructie voor de cliënt" />
+            </label>
+            <label className="field">
+              <span className="label">Uitlegvideo (optioneel)</span>
+              <input name="videoUrl" type="url" inputMode="url" placeholder="https://www.youtube.com/watch?v=…" />
             </label>
           </ActionForm>
         </section>

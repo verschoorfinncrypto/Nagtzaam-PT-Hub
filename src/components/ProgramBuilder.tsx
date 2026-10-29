@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { quickAddExercise, saveProgram } from "@/lib/actions";
 import { PROGRAM_LIMITS } from "@/lib/limits";
+import { videoHref } from "@/lib/video";
 import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
 import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
@@ -16,6 +17,7 @@ type Item = {
   reps: string;
   rpe: string;
   rest: string;
+  painLimit: string;
   load: string;
   notes: string;
   /** Getypte naam die nog niet in de database staat. */
@@ -34,6 +36,7 @@ export type ProgramInit = {
       reps: string;
       rpe: string | null;
       rest: string | null;
+      painLimit: string | null;
       load: string | null;
       notes: string | null;
     }[];
@@ -41,7 +44,7 @@ export type ProgramInit = {
 };
 
 let k = 1;
-const emptyItem = (): Item => ({ key: k++, exerciseId: "", sets: "3", reps: "8", rpe: "", rest: "", load: "", notes: "", missing: "" });
+const emptyItem = (): Item => ({ key: k++, exerciseId: "", sets: "3", reps: "8", rpe: "", rest: "", painLimit: "", load: "", notes: "", missing: "" });
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -148,6 +151,7 @@ export function ProgramBuilder({
             reps: it.reps,
             rpe: it.rpe ?? "",
             rest: it.rest ?? "",
+            painLimit: it.painLimit ?? "",
             load: it.load ?? "",
             notes: it.notes ?? "",
             missing: "",
@@ -170,6 +174,7 @@ export function ProgramBuilder({
           reps: i.reps,
           rpe: i.rpe || undefined,
           rest: i.rest || undefined,
+          painLimit: i.painLimit || undefined,
           load: i.load || undefined,
           notes: i.notes || undefined,
         })),
@@ -228,7 +233,7 @@ export function ProgramBuilder({
           <textarea name="notes" defaultValue={initial?.notes ?? ""} maxLength={2000} placeholder="Doel van dit blok, hoe vaak per week, waar op letten…" />
         </label>
         <p className="hint">
-          Sets, reps, RPE en rust schrijf jij voor. Belasting is optioneel: laat je die leeg, dan vult de cliënt het gewicht in tijdens het trainen.
+          Sets, reps, RPE, rust en een eventuele pijngrens schrijf jij voor. Belasting is optioneel: laat je die leeg, dan vult de cliënt het gewicht in tijdens het trainen.
         </p>
       </section>
 
@@ -257,6 +262,7 @@ export function ProgramBuilder({
                   <th>Reps</th>
                   <th>RPE</th>
                   <th>Rust</th>
+                  <th>Pijngrens</th>
                   <th>Belasting <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}>(optioneel)</span></th>
                   <th>Notitie</th>
                   <th aria-label="Acties" />
@@ -277,6 +283,14 @@ export function ProgramBuilder({
                         onChange={(id) => setItem(d.key, it.key, { exerciseId: id })}
                         onUnmatched={(text) => setItem(d.key, it.key, { missing: text.length >= 2 ? text : "" })}
                       />
+                      {(() => {
+                        const ex = it.exerciseId !== "" ? exercises.find((x) => x.id === it.exerciseId) : undefined;
+                        return ex ? (
+                          <a className="video-link" href={videoHref(ex.name, ex.videoUrl)} target="_blank" rel="noopener noreferrer">
+                            ▶ Uitlegvideo{ex.videoUrl ? "" : " zoeken"}
+                          </a>
+                        ) : null;
+                      })()}
                       {it.missing && it.exerciseId === "" && (
                         <QuickAdd
                           name={it.missing}
@@ -290,8 +304,9 @@ export function ProgramBuilder({
                     </td>
                     <td><input className="compact" style={{ width: 56 }} inputMode="numeric" aria-label="Sets" value={it.sets} onChange={(e) => setItem(d.key, it.key, { sets: e.target.value })} /></td>
                     <td><input className="compact" style={{ width: 72 }} aria-label="Reps" maxLength={PROGRAM_LIMITS.reps} value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>
-                    <td><input className="compact" style={{ width: 84 }} aria-label="RPE" maxLength={PROGRAM_LIMITS.rpe} value={it.rpe} onChange={(e) => setItem(d.key, it.key, { rpe: e.target.value })} placeholder="7" /></td>
+                    <td><input className="compact" style={{ width: 64 }} inputMode="decimal" aria-label="RPE" maxLength={PROGRAM_LIMITS.rpe} value={it.rpe} onChange={(e) => setItem(d.key, it.key, { rpe: e.target.value })} placeholder="7" /></td>
                     <td><input className="compact" style={{ width: 76 }} aria-label="Rust" maxLength={PROGRAM_LIMITS.rest} value={it.rest} onChange={(e) => setItem(d.key, it.key, { rest: e.target.value })} placeholder="90 s" /></td>
+                    <td><input className="compact" style={{ width: 96 }} aria-label="Pijngrens" maxLength={PROGRAM_LIMITS.painLimit} value={it.painLimit} onChange={(e) => setItem(d.key, it.key, { painLimit: e.target.value })} placeholder="max 3/10" /></td>
                     <td><input className="compact" style={{ width: 104 }} aria-label="Belasting" maxLength={PROGRAM_LIMITS.load} value={it.load} onChange={(e) => setItem(d.key, it.key, { load: e.target.value })} placeholder="cliënt kiest" /></td>
                     <td><input className="compact" style={{ minWidth: 120 }} aria-label="Notitie" maxLength={PROGRAM_LIMITS.notes} value={it.notes} onChange={(e) => setItem(d.key, it.key, { notes: e.target.value })} placeholder="Tempo 3-1-1" /></td>
                     <td>

@@ -14,7 +14,7 @@ export default async function NewWorkout({ searchParams }: { searchParams: { day
   const days = (program?.days ?? []).map((d) => ({
     id: d.id,
     name: d.name,
-    items: d.items.map((i) => ({ exerciseId: i.exerciseId, sets: i.sets, reps: i.reps, rpe: i.rpe, rest: i.rest, load: i.load })),
+    items: d.items.map((i) => ({ exerciseId: i.exerciseId, sets: i.sets, reps: i.reps, rpe: i.rpe, rest: i.rest, painLimit: i.painLimit, load: i.load })),
   }));
   const back = me.role === "trainer" ? `/trainer/clients/${client.id}` : "/workouts";
 
