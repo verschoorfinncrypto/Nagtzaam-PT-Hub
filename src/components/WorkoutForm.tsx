@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveWorkout } from "@/lib/actions";
-import { ExerciseDatalist, ExercisePicker, type PickerExercise } from "./ExercisePicker";
+import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
+import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
 type Exercise = PickerExercise;
 type SetRow = { reps: string; weight: string };
@@ -84,6 +85,7 @@ export function WorkoutForm({
   const [title, setTitle] = useState(initialDay?.name ?? "Training");
   const [blocks, setBlocks] = useState<Block[]>(() => fromDay(initialDay, previous));
   const [state, action] = useFormState(saveWorkout, {});
+  const sort = useLongPressSort(blocks, (b) => b.key, setBlocks);
 
   const payload = JSON.stringify(
     blocks
@@ -113,7 +115,6 @@ export function WorkoutForm({
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="payload" value={payload} />
       <input type="hidden" name="programDayId" value={dayId} />
-      <ExerciseDatalist id="exercise-list" exercises={exercises} />
 
       <section className="card">
         <div className="field-row">
@@ -139,15 +140,17 @@ export function WorkoutForm({
         </div>
       </section>
 
+      <div className="stack" ref={sort.containerRef as React.RefObject<HTMLDivElement>}>
       {blocks.map((b, bi) => {
         const prev = b.exerciseId !== "" ? previous[b.exerciseId] : undefined;
+        const row = sort.rowProps(b.key);
         return (
-          <section key={b.key} className="ex-block" style={{ background: "var(--surface-000)" }}>
+          <section key={b.key} data-sort-key={row["data-sort-key"]} className={`ex-block ${row.className ?? ""}`} style={{ background: "var(--surface-000)" }}>
             <div className="ex-head">
-              <span className="label" style={{ minWidth: 24 }}>{bi + 1}</span>
+              <button {...sort.handleProps(b.key, `Oefening ${bi + 1}`)}><GripIcon /></button>
+              <span className="label" style={{ minWidth: 16 }}>{bi + 1}</span>
               <div style={{ flex: 1 }}>
                 <ExercisePicker
-                  listId="exercise-list"
                   exercises={exercises}
                   ariaLabel={`Oefening ${bi + 1}`}
                   value={b.exerciseId}
@@ -233,6 +236,8 @@ export function WorkoutForm({
           </section>
         );
       })}
+
+      </div>
 
       <div>
         <button

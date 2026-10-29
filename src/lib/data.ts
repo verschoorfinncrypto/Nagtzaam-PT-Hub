@@ -28,6 +28,7 @@ export async function getExerciseOptions() {
       region: exercises.region,
       purpose: exercises.purpose,
       cues: exercises.cues,
+      muscles: exercises.muscles,
     })
     .from(exercises)
     .orderBy(asc(exercises.name));

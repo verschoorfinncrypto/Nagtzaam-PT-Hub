@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { quickAddExercise, saveProgram } from "@/lib/actions";
-import { ExerciseDatalist, ExercisePicker, type PickerExercise } from "./ExercisePicker";
+import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
+import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
 type Exercise = PickerExercise;
 type Item = {
@@ -47,6 +48,28 @@ function Submit() {
     <button type="submit" className="btn btn-primary" disabled={pending}>
       {pending ? "Opslaan…" : "Schema opslaan en activeren"}
     </button>
+  );
+}
+
+/** tbody waarin rijen met de greep te verslepen zijn. */
+function SortableBody({
+  items,
+  onReorder,
+  children,
+}: {
+  items: Item[];
+  onReorder: (next: Item[]) => void;
+  children: (
+    it: Item,
+    index: number,
+    sort: { handle: ReturnType<ReturnType<typeof useLongPressSort<Item>>["handleProps"]>; row: ReturnType<ReturnType<typeof useLongPressSort<Item>>["rowProps"]> },
+  ) => React.ReactNode;
+}) {
+  const s = useLongPressSort(items, (i) => i.key, onReorder);
+  return (
+    <tbody ref={s.containerRef as React.RefObject<HTMLTableSectionElement>}>
+      {items.map((it, i) => children(it, i, { handle: s.handleProps(it.key, `Oefening ${i + 1}`), row: s.rowProps(it.key) }))}
+    </tbody>
   );
 }
 
@@ -162,7 +185,6 @@ export function ProgramBuilder({
       <input type="hidden" name="clientId" value={client} />
       <input type="hidden" name="payload" value={payload} />
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
-      <ExerciseDatalist id="exercise-list" exercises={exercises} />
 
       <section className="card">
         <div className="field-row">
@@ -228,6 +250,7 @@ export function ProgramBuilder({
             <table className="builder">
               <thead>
                 <tr>
+                  <th aria-label="Volgorde" />
                   <th style={{ minWidth: 220 }}>Oefening</th>
                   <th>Sets</th>
                   <th>Reps</th>
@@ -238,13 +261,15 @@ export function ProgramBuilder({
                   <th aria-label="Acties" />
                 </tr>
               </thead>
-              <tbody>
-                {d.items.map((it, ii) => (
-                  <tr key={it.key}>
+              <SortableBody items={d.items} onReorder={(items) => setDay(d.key, (x) => ({ ...x, items }))}>
+                {(it, ii, sort) => (
+                  <tr key={it.key} {...sort.row}>
+                    <td className="grip-cell">
+                      <button {...sort.handle}><GripIcon /></button>
+                    </td>
                     <td>
                       <ExercisePicker
                         compact
-                        listId="exercise-list"
                         exercises={exercises}
                         ariaLabel={`Oefening ${ii + 1}`}
                         value={it.exerciseId}
@@ -272,8 +297,8 @@ export function ProgramBuilder({
                       <button type="button" className="btn btn-ghost btn-sm" aria-label="Oefening verwijderen" onClick={() => setDay(d.key, (x) => ({ ...x, items: x.items.filter((i) => i.key !== it.key) }))}>×</button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                )}
+              </SortableBody>
             </table>
           </div>
           <div>

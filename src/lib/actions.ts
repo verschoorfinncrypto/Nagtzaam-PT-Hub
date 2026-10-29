@@ -454,6 +454,7 @@ export async function quickAddExercise(nameRaw: string, categoryRaw: string) {
     region: exercises.region,
     purpose: exercises.purpose,
     cues: exercises.cues,
+    muscles: exercises.muscles,
   };
   // Bestaat al (ook met andere hoofdletters)? Dan die gebruiken.
   const findExisting = () => db.select(cols).from(exercises).where(sql`lower(${exercises.name}) = lower(${name})`).limit(1);
