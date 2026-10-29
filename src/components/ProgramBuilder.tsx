@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { quickAddExercise, saveProgram } from "@/lib/actions";
+import { PROGRAM_LIMITS } from "@/lib/limits";
 import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
 import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
@@ -288,11 +289,11 @@ export function ProgramBuilder({
                       )}
                     </td>
                     <td><input className="compact" style={{ width: 56 }} inputMode="numeric" aria-label="Sets" value={it.sets} onChange={(e) => setItem(d.key, it.key, { sets: e.target.value })} /></td>
-                    <td><input className="compact" style={{ width: 72 }} aria-label="Reps" value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>
-                    <td><input className="compact" style={{ width: 60 }} inputMode="decimal" aria-label="RPE" value={it.rpe} onChange={(e) => setItem(d.key, it.key, { rpe: e.target.value })} placeholder="7" /></td>
-                    <td><input className="compact" style={{ width: 76 }} aria-label="Rust" value={it.rest} onChange={(e) => setItem(d.key, it.key, { rest: e.target.value })} placeholder="90 s" /></td>
-                    <td><input className="compact" style={{ width: 104 }} aria-label="Belasting" value={it.load} onChange={(e) => setItem(d.key, it.key, { load: e.target.value })} placeholder="cliënt kiest" /></td>
-                    <td><input className="compact" style={{ minWidth: 120 }} aria-label="Notitie" value={it.notes} onChange={(e) => setItem(d.key, it.key, { notes: e.target.value })} placeholder="Tempo 3-1-1" /></td>
+                    <td><input className="compact" style={{ width: 72 }} aria-label="Reps" maxLength={PROGRAM_LIMITS.reps} value={it.reps} onChange={(e) => setItem(d.key, it.key, { reps: e.target.value })} placeholder="8-10" /></td>
+                    <td><input className="compact" style={{ width: 84 }} aria-label="RPE" maxLength={PROGRAM_LIMITS.rpe} value={it.rpe} onChange={(e) => setItem(d.key, it.key, { rpe: e.target.value })} placeholder="7" /></td>
+                    <td><input className="compact" style={{ width: 76 }} aria-label="Rust" maxLength={PROGRAM_LIMITS.rest} value={it.rest} onChange={(e) => setItem(d.key, it.key, { rest: e.target.value })} placeholder="90 s" /></td>
+                    <td><input className="compact" style={{ width: 104 }} aria-label="Belasting" maxLength={PROGRAM_LIMITS.load} value={it.load} onChange={(e) => setItem(d.key, it.key, { load: e.target.value })} placeholder="cliënt kiest" /></td>
+                    <td><input className="compact" style={{ minWidth: 120 }} aria-label="Notitie" maxLength={PROGRAM_LIMITS.notes} value={it.notes} onChange={(e) => setItem(d.key, it.key, { notes: e.target.value })} placeholder="Tempo 3-1-1" /></td>
                     <td>
                       <button type="button" className="btn btn-ghost btn-sm" aria-label="Oefening verwijderen" onClick={() => setDay(d.key, (x) => ({ ...x, items: x.items.filter((i) => i.key !== it.key) }))}>×</button>
                     </td>

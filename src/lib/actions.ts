@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { FIELD_LABELS, PROGRAM_LIMITS } from "./limits";
 import {
   bodyWeights,
   db,
@@ -31,6 +32,22 @@ import {
 import { parseNum, today } from "./format";
 
 export type FormResult = { error?: string; ok?: string };
+
+// Nederlandse standaardmeldingen voor validatie, zodat er nooit Engelse foutteksten in beeld komen.
+z.setErrorMap((issue, ctx) => {
+  switch (issue.code) {
+    case "too_big":
+      return { message: issue.type === "string" ? `Maximaal ${issue.maximum} tekens.` : issue.type === "array" ? `Maximaal ${issue.maximum} items.` : `Maximaal ${issue.maximum}.` };
+    case "too_small":
+      return { message: issue.type === "string" ? (issue.minimum === 1 ? "Dit veld is verplicht." : `Minimaal ${issue.minimum} tekens.`) : issue.type === "array" ? `Minimaal ${issue.minimum} items.` : `Minimaal ${issue.minimum}.` };
+    case "invalid_type":
+      return { message: issue.received === "undefined" ? "Dit veld is verplicht." : "Ongeldige waarde." };
+    case "invalid_string":
+      return { message: issue.validation === "email" ? "Vul een geldig e-mailadres in." : "Ongeldige invoer." };
+    default:
+      return { message: ctx.defaultError.startsWith("Invalid") ? "Ongeldige invoer." : ctx.defaultError };
+  }
+});
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ongeldige datum");
 
@@ -329,31 +346,53 @@ export async function deleteTrainer(_: FormResult, form: FormData): Promise<Form
 
 const programSchema = z.object({
   clientId: z.coerce.number().int().positive("Kies eerst een cliënt"),
-  name: z.string().trim().min(1, "Geef het schema een naam").max(120),
-  notes: z.string().trim().max(2000).optional(),
+  name: z.string().trim().min(1, "Geef het schema een naam").max(PROGRAM_LIMITS.name, `De naam van het schema mag maximaal ${PROGRAM_LIMITS.name} tekens zijn`),
+  notes: z.string().trim().max(PROGRAM_LIMITS.programNotes, `De toelichting mag maximaal ${PROGRAM_LIMITS.programNotes} tekens zijn`).optional(),
   days: z
     .array(
       z.object({
-        name: z.string().trim().min(1, "Elke dag heeft een naam nodig").max(80),
+        name: z.string().trim().min(1, "Elke dag heeft een naam nodig").max(PROGRAM_LIMITS.dayName, `Een dagnaam mag maximaal ${PROGRAM_LIMITS.dayName} tekens zijn`),
         items: z
           .array(
             z.object({
               exerciseId: z.number().int().positive(),
-              sets: z.number().int().min(1).max(20),
-              reps: z.string().trim().min(1, "Vul bij elke oefening de reps in").max(20),
-              rpe: z.string().trim().max(10).optional(),
-              rest: z.string().trim().max(20).optional(),
-              load: z.string().trim().max(40).optional(),
-              notes: z.string().trim().max(200).optional(),
+              sets: z.number().int().min(1).max(PROGRAM_LIMITS.sets),
+              reps: z.string().trim().min(1).max(PROGRAM_LIMITS.reps),
+              rpe: z.string().trim().max(PROGRAM_LIMITS.rpe).optional(),
+              rest: z.string().trim().max(PROGRAM_LIMITS.rest).optional(),
+              load: z.string().trim().max(PROGRAM_LIMITS.load).optional(),
+              notes: z.string().trim().max(PROGRAM_LIMITS.notes).optional(),
             }),
           )
           .min(1, "Elke dag heeft minstens één oefening nodig")
-          .max(20),
+          .max(30, "Een dag kan maximaal 30 oefeningen hebben"),
       }),
     )
     .min(1, "Voeg minstens één trainingsdag toe")
-    .max(7),
+    .max(7, "Een schema kan maximaal 7 dagen hebben"),
 });
+
+/** Maakt van een validatiefout een Nederlandse melding met dag, oefening en veld erbij. */
+async function programErrorMessage(issue: z.ZodIssue, days: unknown): Promise<string> {
+  const [root, di, sub, ii, field] = issue.path;
+  if (root === "days" && typeof di === "number" && sub === "items" && typeof ii === "number" && typeof field === "string") {
+    const day = Array.isArray(days) ? (days[di] as { name?: string; items?: { exerciseId?: number }[] }) : undefined;
+    const exId = day?.items?.[ii]?.exerciseId;
+    let exName = `oefening ${ii + 1}`;
+    if (typeof exId === "number") {
+      const [ex] = await db.select({ name: exercises.name }).from(exercises).where(eq(exercises.id, exId)).limit(1);
+      if (ex) exName = ex.name;
+    }
+    const where = `${day?.name || `Dag ${di + 1}`}, ${exName}`;
+    const label = FIELD_LABELS[field] ?? field;
+    if (issue.code === "too_big") return `${where}: ${label} mag maximaal ${issue.maximum} ${field === "sets" ? "zijn" : "tekens zijn"}.`;
+    if (issue.code === "too_small") return field === "reps" ? `${where}: vul de reps in.` : `${where}: ${label} is te laag.`;
+    return `${where}: controleer ${label}.`;
+  }
+  return issue.message && !/^(String|Number|Array|Expected|Required|Invalid)/.test(issue.message)
+    ? issue.message
+    : "Controleer het schema: een van de velden klopt niet.";
+}
 
 export async function saveProgram(_: FormResult, form: FormData): Promise<FormResult> {
   let days: unknown;
@@ -368,7 +407,7 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
     notes: form.get("notes") || undefined,
     days,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Controleer het schema." };
+  if (!parsed.success) return { error: await programErrorMessage(parsed.error.issues[0], days) };
   const d = parsed.data;
   const { viewer } = await requireClientAccess(d.clientId);
   if (viewer.role !== "trainer") return { error: "Alleen je trainer kan schema's maken." };
