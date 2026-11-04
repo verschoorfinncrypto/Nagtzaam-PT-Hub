@@ -68,7 +68,10 @@ export default async function ClientPage({
         <div className="card-head">
           <h2 className="h2">Schema{program ? `: ${program.name}` : ""}</h2>
           {program && (
-            <Link href={`/trainer/schemas/copy?from=${program.id}`} className="btn btn-ghost btn-sm">Kopiëren naar andere cliënten</Link>
+            <span className="actions">
+              <Link href={`/print/schema?client=${client.id}`} className="btn btn-ghost btn-sm">Print / PDF</Link>
+              <Link href={`/trainer/schemas/copy?from=${program.id}`} className="btn btn-ghost btn-sm">Kopiëren naar andere cliënten</Link>
+            </span>
           )}
           {program && (
             <form action={stopProgram}>

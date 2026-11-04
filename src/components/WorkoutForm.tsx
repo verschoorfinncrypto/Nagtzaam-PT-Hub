@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveWorkout } from "@/lib/actions";
-import { videoHref } from "@/lib/video";
+import { VideoButton } from "./VideoButton";
 import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
 import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
@@ -183,9 +183,7 @@ export function WorkoutForm({
               const ex = b.exerciseId !== "" ? exercises.find((e) => e.id === b.exerciseId) : undefined;
               return ex ? (
                 <div className="ex-links">
-                  <a className="video-link" href={videoHref(ex.name, ex.videoUrl)} target="_blank" rel="noopener noreferrer">
-                    ▶ Uitlegvideo
-                  </a>
+                  <VideoButton name={ex.name} videoUrl={ex.videoUrl} />
                   {ex.cues && (
                     <details className="cue">
                       <summary>Uitvoering</summary>

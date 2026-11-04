@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProgramDays } from "@/components/overview";
 import { requireUser } from "@/lib/auth";
 import { getActiveProgram } from "@/lib/data";
@@ -14,6 +15,7 @@ export default async function SchemaPage() {
           <p className="label">Mijn schema</p>
           <h1 className="h1">{program?.name ?? "Nog geen schema"}</h1>
         </div>
+        {program && <Link href="/print/schema" className="btn">Print / PDF</Link>}
       </div>
       {!program && <div className="empty">Je trainer heeft nog geen schema voor je klaargezet.</div>}
       {program?.notes && (

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { addWeight, deleteWeight } from "@/lib/actions";
 import type { PR, ProgramWithDays } from "@/lib/data";
 import { kg, shortDate, today } from "@/lib/format";
-import { videoHref } from "@/lib/video";
+import { VideoButton } from "./VideoButton";
 import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { ActionForm } from "./ActionForm";
 import { BarChart, LineChart } from "./charts";
@@ -201,9 +201,7 @@ export function ProgramDays({
                     {it.exerciseName}
                     {it.notes && <><br /><span className="body-sm muted">{it.notes}</span></>}
                     <span className="ex-links">
-                      <a className="video-link" href={videoHref(it.exerciseName, it.videoUrl)} target="_blank" rel="noopener noreferrer">
-                        ▶ Uitlegvideo
-                      </a>
+                      <VideoButton name={it.exerciseName} videoUrl={it.videoUrl} />
                     </span>
                     {it.cues && (
                       <details className="cue">

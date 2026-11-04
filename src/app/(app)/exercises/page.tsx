@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { addExercise, setExerciseVideo } from "@/lib/actions";
-import { videoHref } from "@/lib/video";
+import { VideoButton } from "@/components/VideoButton";
 import { requireUser } from "@/lib/auth";
 import { getExerciseFacets, searchExercises, type ExerciseFilter } from "@/lib/data";
 
@@ -110,9 +110,7 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Ex
                   </summary>
                   <div className="ex-detail">
                     {e.cues && <p>{e.cues}</p>}
-                    <a className="video-link" href={videoHref(e.name, e.videoUrl)} target="_blank" rel="noopener noreferrer">
-                      ▶ {e.videoUrl ? "Uitlegvideo" : "Uitlegvideo zoeken op YouTube"}
-                    </a>
+                    <VideoButton name={e.name} videoUrl={e.videoUrl} />
                     <dl>
                       {e.muscles && <><dt>Spieren</dt><dd>{e.muscles}</dd></>}
                       {e.equipment && <><dt>Materiaal</dt><dd>{e.equipment}</dd></>}
