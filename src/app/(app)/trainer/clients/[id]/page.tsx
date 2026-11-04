@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { DeleteClientButton } from "@/components/DeleteClientButton";
 import { CheckinCard, ProgramDays, RecentWorkouts } from "@/components/overview";
-import { BodyProfileForm, MeasurementChart, MeasurementForm, MeasurementSummary, MeasurementTable } from "@/components/measurements";
+import { BodyProfileForm, MeasurementForm, MeasurementSummary, MeasurementTable } from "@/components/measurements";
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
 import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
@@ -94,7 +94,18 @@ export default async function ClientPage({
 
       <CheckinCard checkins={checkins} />
 
-      <ProgressView clientId={client.id} exerciseId={searchParams.ex ? Number(searchParams.ex) : undefined} baseHref={`/trainer/clients/${client.id}`} />
+      <ProgressView
+        clientId={client.id}
+        exerciseId={searchParams.ex ? Number(searchParams.ex) : undefined}
+        metric={searchParams.m}
+        baseHref={`/trainer/clients/${client.id}`}
+        bodyForm={
+          <>
+            <h3 className="h2">Meting invoeren voor {client.name.split(" ")[0]}</h3>
+            <MeasurementForm clientId={client.id} />
+          </>
+        }
+      />
 
       <section className="card">
         <div className="card-head">
@@ -104,13 +115,6 @@ export default async function ClientPage({
         <MeasurementSummary rows={weights} profile={client} />
       </section>
 
-      <div className="grid grid-2">
-        <MeasurementChart rows={weights} metric={searchParams.m} baseHref={`/trainer/clients/${client.id}`} />
-        <section className="card">
-          <h2 className="h2">Meting invoeren</h2>
-          <MeasurementForm clientId={client.id} />
-        </section>
-      </div>
 
       {weights.length > 0 && (
         <section className="card">

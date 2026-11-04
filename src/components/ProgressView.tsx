@@ -1,11 +1,24 @@
 import Link from "next/link";
-import { getE1rmHistory, getPRs, getWeekly } from "@/lib/data";
+import { getBodyWeights, getE1rmHistory, getPRs, getWeekly } from "@/lib/data";
 import { kg } from "@/lib/format";
 import { LineChart } from "./charts";
+import { BodyProgress } from "./measurements";
 import { PRTable, WeeklyCard } from "./overview";
 
-export async function ProgressView({ clientId, exerciseId, baseHref }: { clientId: number; exerciseId?: number; baseHref: string }) {
-  const [prs, weekly] = await Promise.all([getPRs(clientId), getWeekly(clientId, 8)]);
+export async function ProgressView({
+  clientId,
+  exerciseId,
+  metric,
+  baseHref,
+  bodyForm,
+}: {
+  clientId: number;
+  exerciseId?: number;
+  metric?: string;
+  baseHref: string;
+  bodyForm?: React.ReactNode;
+}) {
+  const [prs, weekly, body] = await Promise.all([getPRs(clientId), getWeekly(clientId, 8), getBodyWeights(clientId, 3650)]);
   const selected = prs.find((p) => p.exerciseId === exerciseId) ?? prs[0];
   const history = selected ? await getE1rmHistory(clientId, selected.exerciseId) : [];
   const sep = baseHref.includes("?") ? "&" : "?";
@@ -61,6 +74,7 @@ export async function ProgressView({ clientId, exerciseId, baseHref }: { clientI
         </div>
         <PRTable prs={prs} progressHref={href} />
       </section>
+      <BodyProgress rows={body} metric={metric} baseHref={baseHref} form={bodyForm} />
     </>
   );
 }

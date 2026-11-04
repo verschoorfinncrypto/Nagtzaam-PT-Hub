@@ -88,8 +88,6 @@ export async function requireClientAccess(clientId: number) {
     if (u.id !== clientId) notFound();
     return { viewer: u, client: u };
   }
-  // Een trainer mag ook zijn eigen lichaamswaarden bijhouden.
-  if (u.id === clientId) return { viewer: u, client: u };
   const [c] = await db
     .select()
     .from(users)

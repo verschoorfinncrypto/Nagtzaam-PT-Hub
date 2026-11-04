@@ -207,3 +207,104 @@ export function MeasurementTable({ rows, profile }: { rows: MeasurementRow[]; pr
     </div>
   );
 }
+
+const HIGHER_IS_BETTER: Partial<Record<MetricKey, boolean>> = { muscleKg: true, waterPct: true };
+
+/** Lichaamsvoortgang: per waarde eerste meting → laatste meting, plus grafiek van de gekozen waarde. */
+export function BodyProgress({
+  rows,
+  metric,
+  baseHref,
+  form,
+}: {
+  rows: MeasurementRow[];
+  metric?: string;
+  baseHref: string;
+  /** Formulier of link naast de grafiek (trainer: meting invoeren). */
+  form?: React.ReactNode;
+}) {
+  const sep = baseHref.includes("?") ? "&" : "?";
+  const series = METRICS.map((m) => {
+    const pts = rows.filter((r) => r[m.key] != null).map((r) => ({ date: r.date, value: r[m.key] as number }));
+    return { m, pts };
+  }).filter((x) => x.pts.length > 0);
+  const sel = series.find((x) => x.m.key === metric) ?? series[0];
+  const fmt = (v: number, unit: string) => `${kg(v, unit === "kcal" || unit === "jaar" ? 0 : 1)}${unit ? ` ${unit}` : ""}`;
+
+  return (
+    <section className="card" id="lichaam">
+      <div className="card-head">
+        <h2 className="h2">Lichaamsvoortgang</h2>
+        {rows.length > 0 && (
+          <span className="body-sm muted">
+            {rows.length} {rows.length === 1 ? "meting" : "metingen"} sinds {shortDate(rows[0].date)}
+          </span>
+        )}
+      </div>
+      <div className="grid grid-2">
+        <div className="stack">
+          {!sel ? (
+            <div className="empty">Nog geen metingen. {form ? "Vul hiernaast de eerste meting in." : "Vul je eerste meting in bij Metingen."}</div>
+          ) : (
+            <>
+              <div>
+                <p className="label">{sel.m.label}</p>
+                {sel.pts.length > 1 ? (
+                  <ChangeLine first={sel.pts[0]} last={sel.pts[sel.pts.length - 1]} k={sel.m.key} unit={sel.m.unit} fmt={fmt} />
+                ) : (
+                  <p className="body-sm muted">Eén meting: {fmt(sel.pts[0].value, sel.m.unit)}. Na de volgende meting zie je hier de lijn.</p>
+                )}
+              </div>
+              <LineChart unit={sel.m.unit} label={`Verloop ${sel.m.label}`} points={sel.pts} />
+              {series.length > 1 && (
+                <div className="actions">
+                  {series.map(({ m }) => (
+                    <Link key={m.key} href={`${baseHref}${sep}m=${m.key}#lichaam`} scroll={false} className={m.key === sel.m.key ? "tag tag-accent filter-chip" : "tag filter-chip"}>
+                      {m.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {form && <div className="stack">{form}</div>}
+      </div>
+      {series.some((x) => x.pts.length > 1) && (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Waarde</th><th>Start</th><th>Nu</th><th>Verschil</th></tr></thead>
+            <tbody>
+              {series.filter((x) => x.pts.length > 1).map(({ m, pts }) => {
+                const a = pts[0], b = pts[pts.length - 1];
+                const d = Math.round((b.value - a.value) * 10) / 10;
+                const good = d === 0 ? null : LOWER_IS_BETTER[m.key] ? d < 0 : HIGHER_IS_BETTER[m.key] ? d > 0 : null;
+                return (
+                  <tr key={m.key}>
+                    <td>{m.label}</td>
+                    <td>{fmt(a.value, m.unit)} <span className="muted body-sm">{shortDate(a.date)}</span></td>
+                    <td>{fmt(b.value, m.unit)} <span className="muted body-sm">{shortDate(b.date)}</span></td>
+                    <td className={good == null ? "" : good ? "positive" : "alert"}>{d > 0 ? "+" : d < 0 ? "−" : "±"}{fmt(Math.abs(d), m.unit)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChangeLine({ first, last, k, unit, fmt }: { first: { date: string; value: number }; last: { date: string; value: number }; k: MetricKey; unit: string; fmt: (v: number, u: string) => string }) {
+  const d = Math.round((last.value - first.value) * 10) / 10;
+  const good = d === 0 ? null : LOWER_IS_BETTER[k] ? d < 0 : HIGHER_IS_BETTER[k] ? d > 0 : null;
+  return (
+    <p>
+      <span className="metric">{fmt(last.value, unit)}</span>{" "}
+      <span className={good == null ? "body-sm" : good ? "body-sm positive" : "body-sm alert"}>
+        {d > 0 ? "+" : d < 0 ? "−" : "±"}{fmt(Math.abs(d), unit)} sinds {shortDate(first.date)}
+      </span>
+    </p>
+  );
+}

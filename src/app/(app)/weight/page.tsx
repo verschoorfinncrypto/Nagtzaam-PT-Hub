@@ -5,14 +5,14 @@ import { getBodyWeights } from "@/lib/data";
 export const metadata = { title: "Metingen" };
 
 export default async function MeasurementsPage({ searchParams }: { searchParams: { m?: string } }) {
-  const me = await requireUser();
+  const me = await requireUser("client");
   const rows = await getBodyWeights(me.id, 3650);
   return (
     <>
       <div className="page-head">
         <div>
-          <h1 className="h1">{me.role === "trainer" ? "Mijn metingen" : "Metingen"}</h1>
-          <p className="muted">Gewicht en alle waarden van de weegschaal, met wat gezond is en wat aandacht vraagt.{me.role === "trainer" && " Alleen voor jezelf; telt niet mee in de praktijkcijfers."}</p>
+          <h1 className="h1">Metingen</h1>
+          <p className="muted">Gewicht en alle waarden van de weegschaal, met wat gezond is en wat aandacht vraagt.</p>
         </div>
       </div>
       <section className="card">
