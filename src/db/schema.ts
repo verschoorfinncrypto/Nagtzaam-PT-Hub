@@ -72,6 +72,8 @@ export const programExercises = pgTable("program_exercises", {
   id: serial("id").primaryKey(),
   dayId: integer("day_id").notNull().references(() => programDays.id, { onDelete: "cascade" }),
   exerciseId: integer("exercise_id").notNull().references(() => exercises.id, { onDelete: "restrict" }),
+  /** Blok binnen de trainingsdag. */
+  section: text("section", { enum: ["warmup", "main", "cooldown"] }).notNull().default("main"),
   position: integer("position").notNull().default(0),
   sets: integer("sets").notNull().default(3),
   reps: text("reps").notNull().default("8"),

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveWorkout } from "@/lib/actions";
 import { videoHref } from "@/lib/video";
@@ -9,14 +10,20 @@ import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
 type Exercise = PickerExercise;
 type SetRow = { reps: string; weight: string };
-type Block = { key: number; exerciseId: number | ""; target?: string; sets: SetRow[] };
+type Block = { key: number; exerciseId: number | ""; section?: string; target?: string; sets: SetRow[] };
 type Previous = Record<number, { date: string; sets: { reps: number; weight: number }[] }>;
 
 export type DayTemplate = {
   id: number;
   name: string;
-  items: { exerciseId: number; sets: number; reps: string; rpe: string | null; rest: string | null; painLimit: string | null; load: string | null }[];
+  items: { exerciseId: number; section?: string; sets: number; reps: string; rpe: string | null; rest: string | null; painLimit: string | null; load: string | null }[];
 };
+
+/** Enter in een invoerveld mag het formulier niet versturen; alleen de opslaan-knop doet dat. */
+function preventEnterSubmit(e: React.KeyboardEvent<HTMLFormElement>) {
+  const t = e.target as HTMLElement;
+  if (e.key === "Enter" && t.tagName === "INPUT" && (t as HTMLInputElement).type !== "submit") e.preventDefault();
+}
 
 let nextKey = 1;
 
@@ -48,6 +55,7 @@ function fromDay(day: DayTemplate | undefined, previous: Previous): Block[] {
     return {
       key: nextKey++,
       exerciseId: it.exerciseId,
+      section: it.section,
       target: parts.join(" · "),
       sets: Array.from({ length: it.sets }, (_, i) => ({
         reps: firstNumber(it.reps),
@@ -113,7 +121,7 @@ export function WorkoutForm({
   }
 
   return (
-    <form action={action} className="stack">
+    <form action={action} className="stack" onKeyDown={preventEnterSubmit}>
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="payload" value={payload} />
       <input type="hidden" name="programDayId" value={dayId} />
@@ -146,8 +154,11 @@ export function WorkoutForm({
       {blocks.map((b, bi) => {
         const prev = b.exerciseId !== "" ? previous[b.exerciseId] : undefined;
         const row = sort.rowProps(b.key);
+        const showSection = blocks.some((x) => x.section && x.section !== "main") && (bi === 0 || blocks[bi - 1].section !== b.section);
         return (
-          <section key={b.key} data-sort-key={row["data-sort-key"]} className={`ex-block ${row.className ?? ""}`} style={{ background: "var(--surface-000)" }}>
+          <Fragment key={b.key}>
+          {showSection && <h2 className="label section-heading">{SECTION_LABEL[(b.section ?? "main") as Section]}</h2>}
+          <section data-sort-key={row["data-sort-key"]} className={`ex-block ${row.className ?? ""}`} style={{ background: "var(--surface-000)" }}>
             <div className="ex-head">
               <button {...sort.handleProps(b.key, `Oefening ${bi + 1}`)}><GripIcon /></button>
               <span className="label" style={{ minWidth: 16 }}>{bi + 1}</span>
@@ -243,6 +254,7 @@ export function WorkoutForm({
               </button>
             </div>
           </section>
+          </Fragment>
         );
       })}
 

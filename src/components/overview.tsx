@@ -3,6 +3,7 @@ import { addWeight, deleteWeight } from "@/lib/actions";
 import type { PR, ProgramWithDays } from "@/lib/data";
 import { kg, shortDate, today } from "@/lib/format";
 import { videoHref } from "@/lib/video";
+import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { ActionForm } from "./ActionForm";
 import { BarChart, LineChart } from "./charts";
 
@@ -189,7 +190,12 @@ export function ProgramDays({
               <tr><th>Oefening</th><th>Sets × reps</th><th>RPE</th><th>Rust</th><th>Pijngrens</th><th>Belasting</th></tr>
             </thead>
             <tbody>
-              {d.items.map((it) => (
+              {d.items.map((it, idx) => [
+                (idx === 0 || d.items[idx - 1].section !== it.section) && d.items.some((x) => x.section !== "main") ? (
+                  <tr key={`h-${it.section}`} className={`section-row section-${it.section}`}>
+                    <th colSpan={6}><span>{SECTION_LABEL[it.section as Section] ?? "Hoofdblok"}</span></th>
+                  </tr>
+                ) : null,
                 <tr key={it.id}>
                   <td>
                     {it.exerciseName}
@@ -211,8 +217,8 @@ export function ProgramDays({
                   <td style={{ whiteSpace: "nowrap" }}>{it.rest || <span className="muted">–</span>}</td>
                   <td>{it.painLimit || <span className="muted">–</span>}</td>
                   <td>{it.load || <span className="muted">zelf kiezen</span>}</td>
-                </tr>
-              ))}
+                </tr>,
+              ])}
             </tbody>
           </table>
         </section>

@@ -302,3 +302,10 @@ table.builder td { padding-right: 8px; }
 .copy-row:has(input:checked) { border-color: var(--brand); background: var(--brand-tint); }
 .copy-row input { width: 20px; height: 20px; min-height: 0; margin-top: 2px; flex: none; }
 .copy-preview { display: grid; gap: 10px; }
+
+/* Blokken: warming-up, hoofdblok, cooling-down */
+.section-row th { background: var(--surface-100); padding: 8px 10px; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink); border-top: 1px solid var(--line); }
+.section-row th span:first-child { font-weight: 700; }
+.section-row .section-count { margin-left: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink-muted); }
+.section-add td { border-top: 0; padding-top: 2px; }
+.section-heading { margin: 8px 0 -4px; color: var(--ink); font-size: 13px; }

@@ -30,6 +30,7 @@ export default async function NewSchemaPage({ searchParams }: { searchParams: { 
           name: d.name,
           items: d.items.map((i) => ({
             exerciseId: i.exerciseId,
+            section: i.section,
             sets: i.sets,
             reps: i.reps,
             rpe: i.rpe,

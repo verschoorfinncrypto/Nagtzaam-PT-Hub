@@ -13,6 +13,7 @@ import {
   workoutSets,
 } from "@/db";
 import { daysAgo, e1rm, weekStart } from "./format";
+import { sortBySection } from "./sections";
 
 export async function getExercises() {
   return db.select().from(exercises).orderBy(asc(exercises.category), asc(exercises.name));
@@ -100,6 +101,7 @@ async function withDays(p: typeof programs.$inferSelect) {
           exerciseName: exercises.name,
           cues: exercises.cues,
           videoUrl: exercises.videoUrl,
+          section: programExercises.section,
           position: programExercises.position,
           sets: programExercises.sets,
           reps: programExercises.reps,
@@ -114,7 +116,7 @@ async function withDays(p: typeof programs.$inferSelect) {
         .where(inArray(programExercises.dayId, days.map((d) => d.id)))
         .orderBy(asc(programExercises.position))
     : [];
-  return { ...p, days: days.map((d) => ({ ...d, items: items.filter((i) => i.dayId === d.id) })) };
+  return { ...p, days: days.map((d) => ({ ...d, items: sortBySection(items.filter((i) => i.dayId === d.id)) })) };
 }
 
 export async function getWorkouts(clientId: number, limit = 50) {

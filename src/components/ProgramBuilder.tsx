@@ -6,12 +6,14 @@ import { useFormState, useFormStatus } from "react-dom";
 import { quickAddExercise, saveProgram } from "@/lib/actions";
 import { PROGRAM_LIMITS } from "@/lib/limits";
 import { videoHref } from "@/lib/video";
+import { isSection, SECTION_LABEL, SECTIONS, type Section } from "@/lib/sections";
 import { ExercisePicker, type PickerExercise } from "./ExercisePicker";
 import { GripIcon, useLongPressSort } from "./useLongPressSort";
 
 type Exercise = PickerExercise;
 type Item = {
   key: number;
+  section: Section;
   exerciseId: number | "";
   sets: string;
   reps: string;
@@ -32,6 +34,7 @@ export type ProgramInit = {
     name: string;
     items: {
       exerciseId: number;
+      section?: string;
       sets: number;
       reps: string;
       rpe: string | null;
@@ -43,8 +46,14 @@ export type ProgramInit = {
   }[];
 };
 
+/** Enter in een invoerveld mag het formulier niet versturen; alleen de opslaan-knop doet dat. */
+function preventEnterSubmit(e: React.KeyboardEvent<HTMLFormElement>) {
+  const t = e.target as HTMLElement;
+  if (e.key === "Enter" && t.tagName === "INPUT" && (t as HTMLInputElement).type !== "submit") e.preventDefault();
+}
+
 let k = 1;
-const emptyItem = (): Item => ({ key: k++, exerciseId: "", sets: "3", reps: "8", rpe: "", rest: "", painLimit: "", load: "", notes: "", missing: "" });
+const emptyItem = (section: Section = "main"): Item => ({ key: k++, section, exerciseId: "", sets: "3", reps: "8", rpe: "", rest: "", painLimit: "", load: "", notes: "", missing: "" });
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -55,7 +64,8 @@ function Submit() {
   );
 }
 
-/** tbody waarin rijen met de greep te verslepen zijn. */
+/** tbody per blok waarin rijen met de greep te verslepen zijn. */
+type SortApi = ReturnType<typeof useLongPressSort<Item>>;
 function SortableBody({
   items,
   onReorder,
@@ -63,16 +73,18 @@ function SortableBody({
 }: {
   items: Item[];
   onReorder: (next: Item[]) => void;
-  children: (
-    it: Item,
-    index: number,
-    sort: { handle: ReturnType<ReturnType<typeof useLongPressSort<Item>>["handleProps"]>; row: ReturnType<ReturnType<typeof useLongPressSort<Item>>["rowProps"]> },
-  ) => React.ReactNode;
+  children: {
+    header: React.ReactNode;
+    row: (it: Item, index: number, sort: { handle: ReturnType<SortApi["handleProps"]>; row: ReturnType<SortApi["rowProps"]> }) => React.ReactNode;
+    footer: React.ReactNode;
+  };
 }) {
   const s = useLongPressSort(items, (i) => i.key, onReorder);
   return (
     <tbody ref={s.containerRef as React.RefObject<HTMLTableSectionElement>}>
-      {items.map((it, i) => children(it, i, { handle: s.handleProps(it.key, `Oefening ${i + 1}`), row: s.rowProps(it.key) }))}
+      {children.header}
+      {items.map((it, i) => children.row(it, i, { handle: s.handleProps(it.key, `Oefening ${i + 1}`), row: s.rowProps(it.key) }))}
+      {children.footer}
     </tbody>
   );
 }
@@ -146,6 +158,7 @@ export function ProgramBuilder({
           name: d.name,
           items: d.items.map((it) => ({
             key: k++,
+            section: isSection(it.section) ? it.section : "main",
             exerciseId: it.exerciseId,
             sets: String(it.sets),
             reps: it.reps,
@@ -170,6 +183,7 @@ export function ProgramBuilder({
         .filter((i) => i.exerciseId !== "")
         .map((i) => ({
           exerciseId: i.exerciseId,
+          section: i.section,
           sets: parseInt(i.sets, 10) || 1,
           reps: i.reps,
           rpe: i.rpe || undefined,
@@ -185,9 +199,12 @@ export function ProgramBuilder({
   const setDay = (key: number, fn: (d: Day) => Day) => setDays((ds) => ds.map((d) => (d.key === key ? fn(d) : d)));
   const setItem = (dk: number, ik: number, patch: Partial<Item>) =>
     setDay(dk, (d) => ({ ...d, items: d.items.map((i) => (i.key === ik ? { ...i, ...patch } : i)) }));
+  /** Items van één blok vervangen; de dag blijft geordend als warming-up → hoofdblok → cooling-down. */
+  const setSectionItems = (dk: number, section: Section, next: Item[]) =>
+    setDay(dk, (d) => ({ ...d, items: SECTIONS.flatMap((sec) => (sec === section ? next : d.items.filter((i) => i.section === sec))) }));
 
   return (
-    <form action={action} className="stack">
+    <form action={action} className="stack" onKeyDown={preventEnterSubmit}>
       <input type="hidden" name="clientId" value={client} />
       <input type="hidden" name="payload" value={payload} />
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
@@ -268,8 +285,20 @@ export function ProgramBuilder({
                   <th aria-label="Acties" />
                 </tr>
               </thead>
-              <SortableBody items={d.items} onReorder={(items) => setDay(d.key, (x) => ({ ...x, items }))}>
-                {(it, ii, sort) => (
+              {SECTIONS.map((sec) => {
+                const secItems = d.items.filter((i) => i.section === sec);
+                return (
+                  <SortableBody key={sec} items={secItems} onReorder={(items) => setSectionItems(d.key, sec, items)}>
+                    {{
+                      header: (
+                        <tr className={`section-row section-${sec}`}>
+                          <th colSpan={10}>
+                            <span>{SECTION_LABEL[sec]}</span>
+                            <span className="section-count">{secItems.length ? `${secItems.length} ${secItems.length === 1 ? "oefening" : "oefeningen"}` : "leeg"}</span>
+                          </th>
+                        </tr>
+                      ),
+                      row: (it, ii, sort) => (
                   <tr key={it.key} {...sort.row}>
                     <td className="grip-cell">
                       <button {...sort.handle}><GripIcon /></button>
@@ -278,7 +307,7 @@ export function ProgramBuilder({
                       <ExercisePicker
                         compact
                         exercises={exercises}
-                        ariaLabel={`Oefening ${ii + 1}`}
+                        ariaLabel={`${SECTION_LABEL[sec]} oefening ${ii + 1}`}
                         value={it.exerciseId}
                         onChange={(id) => setItem(d.key, it.key, { exerciseId: id })}
                         onUnmatched={(text) => setItem(d.key, it.key, { missing: text.length >= 2 ? text : "" })}
@@ -313,14 +342,22 @@ export function ProgramBuilder({
                       <button type="button" className="btn btn-ghost btn-sm" aria-label="Oefening verwijderen" onClick={() => setDay(d.key, (x) => ({ ...x, items: x.items.filter((i) => i.key !== it.key) }))}>×</button>
                     </td>
                   </tr>
-                )}
-              </SortableBody>
+                ),
+                      footer: (
+                        <tr className="section-add">
+                          <td />
+                          <td colSpan={9}>
+                            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setSectionItems(d.key, sec, [...secItems, emptyItem(sec)])}>
+                              + Oefening in {SECTION_LABEL[sec].toLowerCase()}
+                            </button>
+                          </td>
+                        </tr>
+                      ),
+                    }}
+                  </SortableBody>
+                );
+              })}
             </table>
-          </div>
-          <div>
-            <button type="button" className="btn btn-sm" onClick={() => setDay(d.key, (x) => ({ ...x, items: [...x.items, emptyItem()] }))}>
-              + Oefening
-            </button>
           </div>
         </section>
       ))}

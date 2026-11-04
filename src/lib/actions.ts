@@ -357,6 +357,7 @@ const programSchema = z.object({
           .array(
             z.object({
               exerciseId: z.number().int().positive(),
+              section: z.enum(["warmup", "main", "cooldown"]).default("main"),
               sets: z.number().int().min(1).max(PROGRAM_LIMITS.sets),
               reps: z.string().trim().min(1).max(PROGRAM_LIMITS.reps),
               rpe: z.string().trim().max(PROGRAM_LIMITS.rpe).optional(),
@@ -426,6 +427,7 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
         day.items.map((it, j) => ({
           dayId: pd.id,
           exerciseId: it.exerciseId,
+          section: it.section,
           position: j,
           sets: it.sets,
           reps: it.reps,
@@ -481,6 +483,7 @@ export async function copyProgram(_: FormResult, form: FormData): Promise<FormRe
             items.map((i) => ({
               dayId: nd.id,
               exerciseId: i.exerciseId,
+              section: i.section,
               position: i.position,
               sets: i.sets,
               reps: i.reps,
