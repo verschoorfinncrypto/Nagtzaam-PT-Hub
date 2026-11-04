@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -441,6 +441,63 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
   revalidatePath("/", "layout");
   if (form.get("returnTo") === "schemas") redirect(`/trainer/schemas?saved=${d.clientId}`);
   redirect(`/trainer/clients/${d.clientId}?program=1`);
+}
+
+/** Bestaand schema kopiëren naar één of meer cliënten; elke cliënt krijgt een eigen, los te bewerken kopie die actief wordt. */
+export async function copyProgram(_: FormResult, form: FormData): Promise<FormResult> {
+  const trainer = await requireUser("trainer");
+  const fromId = Number(form.get("fromId"));
+  const clientIds = [...new Set(form.getAll("clientId").map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  const name = String(form.get("name") ?? "").trim().slice(0, PROGRAM_LIMITS.name);
+  if (!clientIds.length) return { error: "Kies minstens één cliënt." };
+  if (clientIds.length > 100) return { error: "Kies maximaal 100 cliënten tegelijk." };
+
+  const [src] = await db.select().from(programs).where(eq(programs.id, fromId)).limit(1);
+  if (!src) return { error: "Dat schema bestaat niet meer." };
+  await requireClientAccess(src.clientId);
+  const targets = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(and(inArray(users.id, clientIds), eq(users.role, "client")));
+  if (targets.length !== clientIds.length) return { error: "Een van de gekozen cliënten bestaat niet meer. Vernieuw de pagina." };
+
+  const srcDays = await db.select().from(programDays).where(eq(programDays.programId, src.id)).orderBy(asc(programDays.position));
+  const srcItems = srcDays.length
+    ? await db.select().from(programExercises).where(inArray(programExercises.dayId, srcDays.map((d) => d.id))).orderBy(asc(programExercises.position))
+    : [];
+
+  await db.transaction(async (tx) => {
+    for (const t of targets) {
+      await tx.update(programs).set({ active: false }).where(and(eq(programs.clientId, t.id), eq(programs.active, true)));
+      const [p] = await tx
+        .insert(programs)
+        .values({ clientId: t.id, trainerId: trainer.id, name: name || src.name, notes: src.notes, active: true })
+        .returning({ id: programs.id });
+      for (const d of srcDays) {
+        const [nd] = await tx.insert(programDays).values({ programId: p.id, name: d.name, position: d.position }).returning({ id: programDays.id });
+        const items = srcItems.filter((i) => i.dayId === d.id);
+        if (items.length) {
+          await tx.insert(programExercises).values(
+            items.map((i) => ({
+              dayId: nd.id,
+              exerciseId: i.exerciseId,
+              position: i.position,
+              sets: i.sets,
+              reps: i.reps,
+              rpe: i.rpe,
+              rest: i.rest,
+              painLimit: i.painLimit,
+              load: i.load,
+              notes: i.notes,
+            })),
+          );
+        }
+      }
+    }
+  });
+  revalidatePath("/", "layout");
+  const who = targets.length === 1 ? targets[0].name : `${targets.length} cliënten`;
+  redirect(`/trainer/schemas?trainer=all&msg=${encodeURIComponent(`Schema "${name || src.name}" gekopieerd naar ${who} en daar actief gezet.`)}`);
 }
 
 export async function stopProgram(form: FormData) {

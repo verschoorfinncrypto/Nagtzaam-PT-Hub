@@ -68,6 +68,9 @@ export default async function ClientPage({
         <div className="card-head">
           <h2 className="h2">Schema{program ? `: ${program.name}` : ""}</h2>
           {program && (
+            <Link href={`/trainer/schemas/copy?from=${program.id}`} className="btn btn-ghost btn-sm">Kopiëren naar andere cliënten</Link>
+          )}
+          {program && (
             <form action={stopProgram}>
               <input type="hidden" name="clientId" value={client.id} />
               <button type="submit" className="btn btn-ghost btn-sm">Schema stoppen</button>

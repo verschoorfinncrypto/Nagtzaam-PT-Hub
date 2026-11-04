@@ -6,7 +6,7 @@ import { shortDate } from "@/lib/format";
 
 export const metadata = { title: "Schema's" };
 
-export default async function SchemasPage({ searchParams }: { searchParams: { saved?: string; trainer?: string } }) {
+export default async function SchemasPage({ searchParams }: { searchParams: { saved?: string; trainer?: string; msg?: string } }) {
   const me = await requireUser("trainer");
   const filter = parseTrainerFilter(searchParams.trainer, me.id);
   const [list, all, trainers, unassigned] = await Promise.all([
@@ -30,6 +30,8 @@ export default async function SchemasPage({ searchParams }: { searchParams: { sa
         </div>
         <Link href="/trainer/schemas/new" className="btn btn-primary">Nieuw schema</Link>
       </div>
+
+      {searchParams.msg && <p className="notice" role="status">{searchParams.msg.slice(0, 200)}</p>}
 
       {saved && (
         <p className="notice" role="status">
@@ -64,9 +66,16 @@ export default async function SchemasPage({ searchParams }: { searchParams: { sa
                     <td>{r.program_id ? r.exercises : "–"}</td>
                     <td>{r.created ? shortDate(r.created) : "–"}</td>
                     <td style={{ textAlign: "right" }}>
-                      <Link href={`/trainer/schemas/new?client=${r.client_id}`} className="btn btn-sm">
-                        {r.program_id ? "Bewerken" : "Schema maken"}
-                      </Link>
+                      <span className="actions" style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>
+                        <Link href={`/trainer/schemas/new?client=${r.client_id}`} className="btn btn-sm">
+                          {r.program_id ? "Bewerken" : "Schema maken"}
+                        </Link>
+                        {r.program_id && (
+                          <Link href={`/trainer/schemas/copy?from=${r.program_id}`} className="btn btn-sm">
+                            Kopiëren naar…
+                          </Link>
+                        )}
+                      </span>
                     </td>
                   </tr>
                 ))}

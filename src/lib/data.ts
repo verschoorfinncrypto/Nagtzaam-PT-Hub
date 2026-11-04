@@ -79,6 +79,17 @@ export async function getActiveProgram(clientId: number) {
     .orderBy(desc(programs.createdAt))
     .limit(1);
   if (!p) return null;
+  return withDays(p);
+}
+
+/** Eén schema op id (actief of gearchiveerd), met dagen en oefeningen. */
+export async function getProgramById(id: number) {
+  const [p] = await db.select().from(programs).where(eq(programs.id, id)).limit(1);
+  if (!p) return null;
+  return withDays(p);
+}
+
+async function withDays(p: typeof programs.$inferSelect) {
   const days = await db.select().from(programDays).where(eq(programDays.programId, p.id)).orderBy(asc(programDays.position));
   const items = days.length
     ? await db
