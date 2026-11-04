@@ -21,6 +21,7 @@ const TRAINER_NAV = [
   { href: "/trainer/data", label: "Data" },
   { href: "/exercises", label: "Oefeningen" },
   { href: "/trainer/team", label: "Team" },
+  { href: "/weight", label: "Mijn metingen" },
   { href: "/hulp", label: "Hulp" },
 ];
 
