@@ -359,3 +359,15 @@ table.builder td { padding-right: 8px; }
 .invite-link input { flex: 1; min-width: 0; font-size: 14px; }
 .terms-row a { font-weight: 600; }
 .legal { max-width: 760px; }
+.grid > * { min-width: 0; }
+
+/* Handboek */
+.help-toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-topic { display: grid; gap: var(--space-6); grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; scroll-margin-top: 90px; }
+.help-topic.mobile { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
+.help-topic video { width: 100%; border-radius: 12px; background: var(--brand); display: block; }
+.help-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 12px; }
+.help-steps li { counter-increment: step; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; font-size: 17px; line-height: 1.45; }
+.help-steps li::before { content: counter(step); width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; display: grid; place-items: center; }
+.help-tip { background: var(--brand-tint); border-radius: 12px; padding: 12px 14px; font-size: 15px; }
+@media (max-width: 760px) { .help-topic, .help-topic.mobile { grid-template-columns: 1fr; } .help-topic.mobile video { max-width: 300px; margin: 0 auto; } }

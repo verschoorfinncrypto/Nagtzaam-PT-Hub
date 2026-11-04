@@ -32,6 +32,11 @@ Stack: Next.js 14 (App Router, server actions), Postgres met Drizzle ORM, sessie
    | `TRAINER_NAME` | jouw naam |
    | `TRAINER_PASSWORD` | startwachtwoord, minstens 10 tekens |
    | `ADMIN_EMAIL` | optioneel: e-mail van de beheerder van de trainers; standaard `TRAINER_EMAIL` |
+   | `APP_URL` | aanbevolen: het adres van de hub, bijv. `https://hub.fysionagtzaam.nl` (voor links in mails) |
+   | `SMTP_HOST` / `SMTP_PORT` | mailserver van de eigen mailbox, bijv. `smtp.office365.com` / `587` (Microsoft 365) of `smtp.gmail.com` / `587` |
+   | `SMTP_USER` / `SMTP_PASS` | inlog van die mailbox (bij Gmail/Microsoft met 2FA: een app-wachtwoord) |
+   | `MAIL_FROM` | optioneel: afzender, bijv. `Fysiotherapie Nagtzaam <info@fysionagtzaam.nl>` |
+   | `SMTP_SECURE` | optioneel: `true` voor poort 465 |
 
 4. Deploy. Bij elke start draaien eerst de migraties (`drizzle/`) en de seed: die vult en actualiseert de oefenbibliotheek (`scripts/exercise-library.mjs`) en maakt het eerste traineraccount aan zolang er nog geen gebruikers zijn. Daarna kun je `TRAINER_PASSWORD` weghalen en je wachtwoord wijzigen onder **Account**.
 5. **Settings → Networking → Generate Domain** voor een publieke URL (of koppel een eigen domein, bijv. `hub.fysiotherapienagtzaam.nl`).
@@ -72,3 +77,14 @@ De meegeleverde oefeningen staan in `scripts/exercise-library.mjs`, één regel 
 - Eigen oefeningen bewerken of verwijderen in de app.
 - Video's of afbeeldingen bij oefeningen.
 - Logo als SVG: de huidige PNG's in `public/brand/` zijn uitgesneden uit een afbeelding van 447 px. Vervang ze door een SVG zodra de praktijk die heeft.
+
+## Uitnodigingen en voorwaarden
+
+- Op de cliëntpagina staat **Toegang tot de hub** → *Uitnodiging mailen*. De cliënt krijgt een mail, kiest een wachtwoord en accepteert de voorwaarden (versie + datum worden opgeslagen). Link werkt 14 dagen, één keer.
+- Zonder SMTP-instellingen maakt de knop een link die je zelf kunt doorsturen.
+- *Wachtwoord vergeten?* op de inlogpagina stuurt een link die 24 uur werkt (alleen met SMTP).
+- Voorwaarden en privacyverklaring: `src/app/voorwaarden/page.tsx` en `src/app/privacy/page.tsx` (nu concept). Na de definitieve tekst: `TERMS_IS_DRAFT = false` en eventueel `TERMS_VERSION` verhogen in `src/lib/terms.ts`.
+
+## Handboek
+
+`/hulp` (menu *Hulp*) met korte filmpjes in `public/help/` en stap-voor-stap uitleg, apart voor trainers en cliënten.

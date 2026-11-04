@@ -192,7 +192,7 @@ export function ProgramDays({
               <Link href={startHref(d.id)} className="btn btn-primary btn-sm">Start training</Link>
             )}
           </div>
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr><th>Oefening</th><th>Sets × reps</th><th>RPE</th><th>Rust</th><th>Pijngrens</th><th>Belasting</th></tr>
             </thead>
@@ -225,7 +225,7 @@ export function ProgramDays({
                 </tr>,
               ])}
             </tbody>
-          </table>
+          </table></div>
         </section>
       ))}
     </div>

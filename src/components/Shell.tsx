@@ -11,6 +11,7 @@ const CLIENT_NAV = [
   { href: "/weight", label: "Metingen" },
   { href: "/progress", label: "Voortgang" },
   { href: "/exercises", label: "Oefeningen" },
+  { href: "/hulp", label: "Hulp" },
 ];
 
 const TRAINER_NAV = [
@@ -20,6 +21,7 @@ const TRAINER_NAV = [
   { href: "/trainer/data", label: "Data" },
   { href: "/exercises", label: "Oefeningen" },
   { href: "/trainer/team", label: "Team" },
+  { href: "/hulp", label: "Hulp" },
 ];
 
 export function Shell({ user, viewer, children }: { user: User; viewer?: User | null; children: React.ReactNode }) {
