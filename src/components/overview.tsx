@@ -3,6 +3,8 @@ import { addWeight, deleteWeight } from "@/lib/actions";
 import type { PR, ProgramWithDays } from "@/lib/data";
 import { kg, shortDate, today } from "@/lib/format";
 import { VideoButton } from "./VideoButton";
+
+export const FEELING: Record<number, string> = { 1: "slecht", 2: "matig", 3: "oké", 4: "goed", 5: "top" };
 import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { ActionForm } from "./ActionForm";
 import { BarChart, LineChart } from "./charts";
@@ -233,7 +235,7 @@ export function ProgramDays({
 export function RecentWorkouts({
   workouts,
 }: {
-  workouts: { id: number; date: string; title: string; sets: number; volume: number; rpe: number | null }[];
+  workouts: { id: number; date: string; title: string; sets: number; volume: number; rpe: number | null; pain?: number | null; feeling?: number | null }[];
 }) {
   if (!workouts.length) return <div className="empty">Nog geen trainingen gelogd.</div>;
   return (
@@ -245,11 +247,45 @@ export function RecentWorkouts({
             <br />
             <span className="body-sm muted">
               {shortDate(w.date)} · {w.sets} sets{w.rpe ? ` · RPE ${w.rpe}` : ""}
+              {w.pain != null && <> · <span className={w.pain >= 6 ? "alert" : undefined}>pijn {w.pain}/10</span></>}
+              {w.feeling != null && <> · {FEELING[w.feeling]}</>}
             </span>
           </Link>
           <span className="num body-sm">{kg(w.volume, 0)} kg</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Pijn en gevoel na de laatste trainingen, met signaal bij hoge pijn. */
+export function CheckinCard({ checkins }: { checkins: { date: string; pain: number | null; feeling: number | null; rpe: number | null; title: string }[] }) {
+  const withPain = checkins.filter((c) => c.pain != null);
+  const last = checkins[checkins.length - 1];
+  const recentHigh = checkins.slice(-3).some((c) => (c.pain ?? 0) >= 6);
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2 className="h2">Check-in na training</h2>
+        <span className="body-sm muted">pijn 0–10 · gevoel 1–5</span>
+      </div>
+      {!checkins.length ? (
+        <div className="empty">Nog geen check-ins. Die vul je in onderaan het loggen van een training.</div>
+      ) : (
+        <>
+          {recentHigh && <p className="notice notice-alert">Pijn 6 of hoger bij een van de laatste 3 trainingen. Bespreek de belasting.</p>}
+          {last && (
+            <p className="body-sm">
+              Laatste ({shortDate(last.date)}): {last.pain != null ? <b>pijn {last.pain}/10</b> : "pijn –"}
+              {last.feeling != null && <> · gevoel <b>{FEELING[last.feeling]}</b></>}
+              {last.rpe != null && <> · RPE {last.rpe}</>}
+            </p>
+          )}
+          {withPain.length > 1 && (
+            <LineChart zero unit="/10" label="Pijn per training" points={withPain.map((c) => ({ date: c.date, value: c.pain as number }))} />
+          )}
+        </>
+      )}
+    </section>
   );
 }

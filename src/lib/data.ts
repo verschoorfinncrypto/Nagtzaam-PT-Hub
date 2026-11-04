@@ -126,6 +126,8 @@ export async function getWorkouts(clientId: number, limit = 50) {
       date: workouts.date,
       title: workouts.title,
       rpe: workouts.rpe,
+      pain: workouts.pain,
+      feeling: workouts.feeling,
       sets: sql<number>`count(${workoutSets.id})::int`,
       volume: sql<number>`coalesce(sum(${workoutSets.reps} * ${workoutSets.weight}), 0)::float`,
     })
@@ -403,4 +405,15 @@ export async function getTrainerPrograms(filter: TrainerFilter) {
     days: number;
     exercises: number;
   }[];
+}
+
+/** Check-ins (pijn/gevoel) van de laatste trainingen, oud → nieuw. */
+export async function getCheckins(clientId: number, limit = 20) {
+  const rows = await db
+    .select({ date: workouts.date, pain: workouts.pain, feeling: workouts.feeling, rpe: workouts.rpe, title: workouts.title })
+    .from(workouts)
+    .where(and(eq(workouts.clientId, clientId), sql`(${workouts.pain} is not null or ${workouts.feeling} is not null)`))
+    .orderBy(desc(workouts.date), desc(workouts.id))
+    .limit(limit);
+  return rows.reverse();
 }

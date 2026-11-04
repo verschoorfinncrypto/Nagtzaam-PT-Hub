@@ -101,6 +101,9 @@ export const workouts = pgTable(
     title: text("title").notNull(),
     programDayId: integer("program_day_id").references(() => programDays.id, { onDelete: "set null" }),
     rpe: integer("rpe"),
+    /** Check-in na de training: pijn 0–10 (NRS) en gevoel 1–5. */
+    pain: integer("pain"),
+    feeling: integer("feeling"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

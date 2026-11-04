@@ -48,6 +48,9 @@ export async function getPracticeStats() {
       where s.weight > 0 order by w.date, w.id`),
   ]);
 
+  const lastPain = await rows<{ client_id: number; pain: number; date: string }>(sql`
+    select distinct on (client_id) client_id, pain, date::text as date
+    from workouts where pain is not null order by client_id, date desc, id desc`);
   const byClient = new Map(workoutsPerClient.map((w) => [w.client_id, w]));
   const withProgram = new Set(programs.map((p) => p.client_id));
   const tracking = new Set(weights.map((w) => w.client_id));
@@ -125,7 +128,17 @@ export async function getPracticeStats() {
     .filter((c) => (c.last ? c.last < d14 : c.created <= daysAgo(7)))
     .sort((a, b) => (b.days ?? 9999) - (a.days ?? 9999));
 
+  const highPain = lastPain
+    .filter((r) => r.pain >= 6)
+    .map((r) => {
+      const c = clients.find((x) => x.id === r.client_id);
+      return c ? { id: c.id, name: c.name, trainer: c.trainer_id ? trainerName.get(c.trainer_id) ?? "–" : "–", pain: r.pain, date: r.date } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => !!x)
+    .sort((a, b) => b.pain - a.pain);
+
   return {
+    highPain,
     total,
     newThisMonth: clients.filter((c) => c.created >= monthStart).length,
     fysio: clients.filter((c) => c.source === "fysio").length,

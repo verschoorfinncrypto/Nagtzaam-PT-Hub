@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FEELING } from "@/components/overview";
 import { deleteWorkout } from "@/lib/actions";
 import { requireClientAccess } from "@/lib/auth";
 import { getPRs, getWorkout } from "@/lib/data";
@@ -45,6 +46,8 @@ export default async function WorkoutPage({ params, searchParams }: { params: { 
         <div className="stat"><span className="label">Volume</span><span><span className="metric">{kg(volume, 0)}</span><span className="unit">kg</span></span></div>
         <div className="stat"><span className="label">Sets</span><span className="metric">{w.groups.reduce((s, g) => s + g.sets.length, 0)}</span></div>
         <div className="stat"><span className="label">Zwaarte</span><span className="metric">{w.rpe ? `RPE ${w.rpe}` : "–"}</span></div>
+        {w.pain != null && <div className="stat"><span className="label">Pijn</span><span className={w.pain >= 6 ? "metric alert" : "metric"}>{w.pain}/10</span></div>}
+        {w.feeling != null && <div className="stat"><span className="label">Gevoel</span><span className="metric">{FEELING[w.feeling]}</span></div>}
       </div>
 
       {w.groups.map((g, i) => {

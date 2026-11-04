@@ -61,6 +61,8 @@ const workoutSchema = z.object({
   title: z.string().trim().min(1, "Geef de training een naam").max(120),
   programDayId: z.coerce.number().int().positive().optional(),
   rpe: z.coerce.number().int().min(1).max(10).optional(),
+  pain: z.coerce.number().int().min(0).max(10).optional(),
+  feeling: z.coerce.number().int().min(1).max(5).optional(),
   notes: z.string().trim().max(2000).optional(),
   exercises: z
     .array(
@@ -87,6 +89,8 @@ export async function saveWorkout(_: FormResult, form: FormData): Promise<FormRe
     title: form.get("title"),
     programDayId: form.get("programDayId") || undefined,
     rpe: form.get("rpe") || undefined,
+    pain: form.get("pain") === "" || form.get("pain") == null ? undefined : form.get("pain"),
+    feeling: form.get("feeling") || undefined,
     notes: form.get("notes") || undefined,
     exercises: payload,
   });
@@ -108,6 +112,8 @@ export async function saveWorkout(_: FormResult, form: FormData): Promise<FormRe
         title: d.title,
         programDayId: d.programDayId ?? null,
         rpe: d.rpe ?? null,
+        pain: d.pain ?? null,
+        feeling: d.feeling ?? null,
         notes: d.notes ?? null,
       })
       .returning({ id: workouts.id });

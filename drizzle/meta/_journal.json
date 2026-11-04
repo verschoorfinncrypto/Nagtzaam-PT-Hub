@@ -57,6 +57,13 @@
       "when": 1793787220914,
       "tag": "0007_measurements",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793787454030,
+      "tag": "0008_workout_checkin",
+      "breakpoints": true
     }
   ]
 }

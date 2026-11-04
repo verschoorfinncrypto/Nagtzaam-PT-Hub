@@ -269,14 +269,35 @@ export function WorkoutForm({
       </div>
 
       <section className="card">
+        <h2 className="h2">Hoe ging het?</h2>
         <div className="field-row">
           <label className="field">
             <span className="label">Zwaarte (RPE 1–10)</span>
             <select name="rpe" defaultValue="">
               <option value="">–</option>
               {Array.from({ length: 10 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>{i + 1}</option>
+                <option key={i + 1} value={i + 1}>{i + 1}{i === 0 ? " · heel licht" : i === 9 ? " · maximaal" : ""}</option>
               ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">Pijn tijdens/na training (0–10)</span>
+            <select name="pain" defaultValue="">
+              <option value="">–</option>
+              {Array.from({ length: 11 }, (_, i) => (
+                <option key={i} value={i}>{i}{i === 0 ? " · geen pijn" : i === 10 ? " · ergst denkbaar" : ""}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">Gevoel</span>
+            <select name="feeling" defaultValue="">
+              <option value="">–</option>
+              <option value="1">1 · Slecht</option>
+              <option value="2">2 · Matig</option>
+              <option value="3">3 · Oké</option>
+              <option value="4">4 · Goed</option>
+              <option value="5">5 · Top</option>
             </select>
           </label>
         </div>

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { DeleteClientButton } from "@/components/DeleteClientButton";
-import { ProgramDays, RecentWorkouts } from "@/components/overview";
+import { CheckinCard, ProgramDays, RecentWorkouts } from "@/components/overview";
 import { BodyProfileForm, MeasurementChart, MeasurementForm, MeasurementSummary, MeasurementTable } from "@/components/measurements";
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
 import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
-import { getActiveProgram, getBodyWeights, getTrainers, getWorkouts } from "@/lib/data";
+import { getActiveProgram, getBodyWeights, getCheckins, getTrainers, getWorkouts } from "@/lib/data";
 
 export const metadata = { title: "Cliënt" };
 
@@ -19,11 +19,12 @@ export default async function ClientPage({
 }) {
   await requireUser("trainer");
   const { client } = await requireClientAccess(Number(params.id));
-  const [program, weights, recent, trainers] = await Promise.all([
+  const [program, weights, recent, trainers, checkins] = await Promise.all([
     getActiveProgram(client.id),
     getBodyWeights(client.id, 3650),
     getWorkouts(client.id, 8),
     getTrainers(),
+    getCheckins(client.id),
   ]);
   const trainerName = trainers.find((t) => t.id === client.trainerId)?.name;
   const email = displayEmail(client.email);
@@ -87,6 +88,8 @@ export default async function ClientPage({
           <div className="empty">Nog geen actief schema.</div>
         )}
       </section>
+
+      <CheckinCard checkins={checkins} />
 
       <ProgressView clientId={client.id} exerciseId={searchParams.ex ? Number(searchParams.ex) : undefined} baseHref={`/trainer/clients/${client.id}`} />
 

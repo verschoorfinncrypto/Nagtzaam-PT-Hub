@@ -209,6 +209,30 @@ export default async function DataPage() {
             </div>
           </section>
 
+          {s.highPain.length > 0 && (
+            <section className="card">
+              <div className="card-head">
+                <h2 className="h2">Hoge pijn bij laatste training</h2>
+                <span className="body-sm muted">check-in pijn 6/10 of hoger</span>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Cliënt</th><th>Trainer</th><th>Pijn</th><th>Datum</th></tr></thead>
+                  <tbody>
+                    {s.highPain.map((c) => (
+                      <tr key={c.id}>
+                        <td><Link href={`/trainer/clients/${c.id}`} style={{ fontWeight: 600 }}>{c.name}</Link></td>
+                        <td>{c.trainer}</td>
+                        <td><span className="tag tag-alert">{c.pain}/10</span></td>
+                        <td>{shortDate(c.date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           <section className="card">
             <div className="card-head">
               <h2 className="h2">Aandacht nodig</h2>
