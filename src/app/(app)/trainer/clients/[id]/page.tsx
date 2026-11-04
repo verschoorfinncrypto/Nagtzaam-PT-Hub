@@ -6,6 +6,8 @@ import { BodyProfileForm, MeasurementChart, MeasurementForm, MeasurementSummary,
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
 import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
+import { InviteCard } from "@/components/InviteCard";
+import { mailConfigured } from "@/lib/mail";
 import { getActiveProgram, getBodyWeights, getCheckins, getTrainers, getWorkouts } from "@/lib/data";
 
 export const metadata = { title: "Cliënt" };
@@ -61,7 +63,8 @@ export default async function ClientPage({
       )}
       {searchParams.created === "nologin" && (
         <p className="notice" role="status">
-          {client.name} is aangemaakt zonder login. Je kunt alles zelf bijhouden of via &quot;Bekijk als cliënt&quot; de hub testen zoals {client.name.split(" ")[0]} hem ziet.
+          {client.name} is aangemaakt.{" "}
+          {email ? <>Stuur nu bij <a href="#toegang">Toegang tot de hub</a> de uitnodiging, dan kiest {client.name.split(" ")[0]} zelf een wachtwoord.</> : <>Zonder e-mailadres kun je alles zelf bijhouden of via &quot;Bekijk als cliënt&quot; de hub testen.</>}
         </p>
       )}
       {searchParams.program && <p className="notice" role="status">Schema opgeslagen en actief gezet.</p>}
@@ -167,6 +170,13 @@ export default async function ClientPage({
           <div className="danger-zone">
             <DeleteClientButton clientId={client.id} name={client.name} withLabel />
           </div>
+        </section>
+        <section className="card" id="toegang">
+          <h2 className="h2">Toegang tot de hub</h2>
+          <InviteCard userId={client.id} email={email} canLogin={canLogin} mailReady={mailConfigured()} />
+          {client.termsAcceptedAt && (
+            <p className="hint">Voorwaarden geaccepteerd op {client.termsAcceptedAt.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })} (versie {client.termsVersion}).</p>
+          )}
         </section>
       </div>
     </>

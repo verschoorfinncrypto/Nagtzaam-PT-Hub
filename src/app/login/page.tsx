@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { LoginForm } from "./form";
@@ -34,6 +35,7 @@ export default async function LoginPage() {
             <p className="muted">Je account krijg je van je trainer.</p>
           </div>
           <LoginForm />
+          <p className="body-sm"><Link href="/wachtwoord-vergeten">Wachtwoord vergeten?</Link> · Nog geen wachtwoord? Je trainer stuurt je een uitnodiging.</p>
         </div>
       </section>
     </main>

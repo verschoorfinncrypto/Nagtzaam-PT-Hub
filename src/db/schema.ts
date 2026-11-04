@@ -29,6 +29,21 @@ export const users = pgTable("users", {
   sex: text("sex", { enum: ["m", "v"] }),
   birthYear: integer("birth_year"),
   heightCm: doublePrecision("height_cm"),
+  /** Versie van de algemene voorwaarden die de gebruiker heeft geaccepteerd, en wanneer. */
+  termsVersion: text("terms_version"),
+  termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Eenmalige links: uitnodiging (wachtwoord aanmaken) of wachtwoord vergeten. Alleen de hash van de token wordt bewaard. */
+export const invites = pgTable("invites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  purpose: text("purpose", { enum: ["invite", "reset"] }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

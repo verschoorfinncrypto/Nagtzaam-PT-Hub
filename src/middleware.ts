@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-const PUBLIC = ["/login", "/api/health"];
+const PUBLIC = ["/login", "/api/health", "/uitnodiging", "/wachtwoord-vergeten", "/voorwaarden", "/privacy"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -21,5 +21,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|brand/|icons/|manifest.webmanifest).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|brand/|icons/|help/|manifest.webmanifest).*)"],
 };

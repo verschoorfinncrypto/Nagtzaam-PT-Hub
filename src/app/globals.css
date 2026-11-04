@@ -353,3 +353,9 @@ table.builder td { padding-right: 8px; }
 /* Groepen */
 .attendance { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 .group-grid td { vertical-align: middle; }
+
+/* Uitnodiging */
+.invite-link { display: flex; gap: 8px; }
+.invite-link input { flex: 1; min-width: 0; font-size: 14px; }
+.terms-row a { font-weight: 600; }
+.legal { max-width: 760px; }
