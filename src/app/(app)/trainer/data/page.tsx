@@ -93,7 +93,7 @@ export default async function DataPage() {
               <span className="body-sm muted">bij {s.prClients} {s.prClients === 1 ? "cliënt" : "cliënten"}</span>
             </div>
             <div className="stat">
-              <span className="label">Houdt gewicht bij</span>
+              <span className="label">Houdt metingen bij</span>
               <span>
                 <span className="metric">{s.weightTracking}</span>
                 <span className="unit">{pct(s.weightTracking, s.total)}</span>

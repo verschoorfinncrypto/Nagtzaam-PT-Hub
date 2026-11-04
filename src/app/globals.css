@@ -341,3 +341,11 @@ table.builder td { padding-right: 8px; }
   .print-cue { display: none; }
   tr { break-inside: avoid; }
 }
+
+/* Metingen */
+.more-fields > summary { cursor: pointer; font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+.measure-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.measure-summary { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.measure-item { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); align-content: start; }
+.measure-marker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
+.dot-alert { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--alert); margin-left: 6px; vertical-align: middle; }

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FIELD_LABELS, PROGRAM_LIMITS } from "./limits";
 import { cleanVideoUrl } from "./video";
+import { bmiFrom, METRICS, type MetricKey } from "./markers";
 import {
   bodyWeights,
   db,
@@ -139,24 +140,54 @@ export async function deleteWorkout(form: FormData) {
 
 /* ---------- Lichaamsgewicht ---------- */
 
+/** Meting opslaan: gewicht en/of andere waarden van de weegschaal en omtrekken. Op dezelfde dag vult een tweede meting aan. */
 export async function addWeight(_: FormResult, form: FormData): Promise<FormResult> {
   const clientId = Number(form.get("clientId"));
   const date = String(form.get("date") ?? today());
-  const weight = parseNum(form.get("weight"));
-  const note = String(form.get("note") ?? "").trim() || null;
+  const note = String(form.get("note") ?? "").trim().slice(0, 200) || null;
   if (!isoDate.safeParse(date).success) return { error: "Ongeldige datum." };
   if (date > today()) return { error: "Een datum in de toekomst kan niet." };
-  if (!Number.isFinite(weight) || weight < 20 || weight > 400) return { error: "Vul een gewicht in tussen 20 en 400 kg." };
-  await requireClientAccess(clientId);
+  const { client } = await requireClientAccess(clientId);
+
+  const values: Partial<Record<MetricKey, number>> = {};
+  for (const m of METRICS) {
+    const raw = form.get(m.key === "weightKg" ? "weight" : m.key);
+    if (raw == null || String(raw).trim() === "") continue;
+    const n = parseNum(raw);
+    if (!Number.isFinite(n) || n < m.min || n > m.max) return { error: `${m.label}: vul een waarde in tussen ${m.min} en ${m.max}${m.unit ? " " + m.unit : ""}.` };
+    values[m.key] = m.step === "1" ? Math.round(n) : Math.round(n * 10) / 10;
+  }
+  if (!Object.keys(values).length) return { error: "Vul minstens één meetwaarde in." };
+  // BMI automatisch uit gewicht en lengte als die niet is ingevuld
+  if (values.bmi == null && values.weightKg && client.heightCm) values.bmi = bmiFrom(values.weightKg, client.heightCm) ?? undefined;
+
+  const set: Record<string, unknown> = {};
+  for (const k of Object.keys(values)) set[k] = values[k as MetricKey];
+  if (note) set.note = note;
   await db
     .insert(bodyWeights)
-    .values({ clientId, date, weightKg: Math.round(weight * 10) / 10, note })
-    .onConflictDoUpdate({
-      target: [bodyWeights.clientId, bodyWeights.date],
-      set: { weightKg: Math.round(weight * 10) / 10, note },
-    });
+    .values({ clientId, date, note, ...values, bmr: values.bmr, metabolicAge: values.metabolicAge })
+    .onConflictDoUpdate({ target: [bodyWeights.clientId, bodyWeights.date], set });
   revalidatePath("/", "layout");
-  return { ok: "Gewicht opgeslagen." };
+  return { ok: "Meting opgeslagen." };
+}
+
+/** Geslacht, geboortejaar en lengte (voor BMI en referentiewaarden). Door de cliënt zelf of een trainer. */
+export async function updateBodyProfile(_: FormResult, form: FormData): Promise<FormResult> {
+  const clientId = Number(form.get("clientId"));
+  await requireClientAccess(clientId);
+  const sexRaw = String(form.get("sex") ?? "");
+  const sex = sexRaw === "m" || sexRaw === "v" ? sexRaw : null;
+  const by = String(form.get("birthYear") ?? "").trim();
+  const birthYear = by ? Number(by) : null;
+  const thisYear = Number(today().slice(0, 4));
+  if (birthYear != null && (!Number.isInteger(birthYear) || birthYear < thisYear - 110 || birthYear > thisYear - 5)) return { error: "Vul een geldig geboortejaar in." };
+  const h = String(form.get("heightCm") ?? "").trim();
+  const heightCm = h ? parseNum(h) : null;
+  if (heightCm != null && (!Number.isFinite(heightCm) || heightCm < 100 || heightCm > 250)) return { error: "Vul een lengte in tussen 100 en 250 cm." };
+  await db.update(users).set({ sex, birthYear, heightCm }).where(eq(users.id, clientId));
+  revalidatePath("/", "layout");
+  return { ok: "Gegevens voor de referentiewaarden opgeslagen." };
 }
 
 export async function deleteWeight(form: FormData) {

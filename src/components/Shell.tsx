@@ -8,7 +8,7 @@ const CLIENT_NAV = [
   { href: "/dashboard", label: "Overzicht" },
   { href: "/workouts", label: "Trainingen" },
   { href: "/schema", label: "Mijn schema" },
-  { href: "/weight", label: "Gewicht" },
+  { href: "/weight", label: "Metingen" },
   { href: "/progress", label: "Voortgang" },
   { href: "/exercises", label: "Oefeningen" },
 ];

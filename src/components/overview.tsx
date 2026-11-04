@@ -7,9 +7,12 @@ import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { ActionForm } from "./ActionForm";
 import { BarChart, LineChart } from "./charts";
 
-type Weight = { id: number; date: string; weightKg: number; note: string | null };
+type Weight = { id: number; date: string; weightKg: number | null; note: string | null };
+type WeightRow = { id: number; date: string; weightKg: number; note: string | null };
+const onlyWeights = (ws: Weight[]) => ws.filter((w): w is WeightRow => w.weightKg != null);
 
-export function weightDelta(weights: Weight[], days: number) {
+export function weightDelta(all: Weight[], days: number) {
+  const weights = onlyWeights(all);
   if (weights.length < 2) return null;
   const last = weights[weights.length - 1];
   const from = new Date(last.date + "T12:00:00");
@@ -53,7 +56,8 @@ export function WeightForm({ clientId }: { clientId: number }) {
   );
 }
 
-export function WeightCard({ weights, title = "Lichaamsgewicht" }: { weights: Weight[]; title?: string }) {
+export function WeightCard({ weights: all, title = "Lichaamsgewicht" }: { weights: Weight[]; title?: string }) {
+  const weights = onlyWeights(all);
   const last = weights[weights.length - 1];
   const d30 = weightDelta(weights, 30);
   return (
@@ -80,7 +84,8 @@ export function WeightCard({ weights, title = "Lichaamsgewicht" }: { weights: We
   );
 }
 
-export function WeightTable({ weights }: { weights: Weight[] }) {
+export function WeightTable({ weights: all }: { weights: Weight[] }) {
+  const weights = onlyWeights(all);
   if (!weights.length) return null;
   const rows = [...weights].reverse();
   return (

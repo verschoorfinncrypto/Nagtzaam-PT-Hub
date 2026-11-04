@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { DeleteClientButton } from "@/components/DeleteClientButton";
-import { ProgramDays, RecentWorkouts, WeightCard, WeightForm } from "@/components/overview";
+import { ProgramDays, RecentWorkouts } from "@/components/overview";
+import { BodyProfileForm, MeasurementChart, MeasurementForm, MeasurementSummary, MeasurementTable } from "@/components/measurements";
 import { ProgressView } from "@/components/ProgressView";
 import { stopProgram, updateClient, viewAsClient } from "@/lib/actions";
 import { displayEmail, hasLogin, requireClientAccess, requireUser } from "@/lib/auth";
@@ -14,13 +15,13 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { created?: string; program?: string; ex?: string };
+  searchParams: { created?: string; program?: string; ex?: string; m?: string };
 }) {
   await requireUser("trainer");
   const { client } = await requireClientAccess(Number(params.id));
   const [program, weights, recent, trainers] = await Promise.all([
     getActiveProgram(client.id),
-    getBodyWeights(client.id, 365),
+    getBodyWeights(client.id, 3650),
     getWorkouts(client.id, 8),
     getTrainers(),
   ]);
@@ -89,19 +90,41 @@ export default async function ClientPage({
 
       <ProgressView clientId={client.id} exerciseId={searchParams.ex ? Number(searchParams.ex) : undefined} baseHref={`/trainer/clients/${client.id}`} />
 
+      <section className="card">
+        <div className="card-head">
+          <h2 className="h2">Metingen</h2>
+          <span className="body-sm muted">laatste waarde per meting</span>
+        </div>
+        <MeasurementSummary rows={weights} profile={client} />
+      </section>
+
+      <div className="grid grid-2">
+        <MeasurementChart rows={weights} metric={searchParams.m} baseHref={`/trainer/clients/${client.id}`} />
+        <section className="card">
+          <h2 className="h2">Meting invoeren</h2>
+          <MeasurementForm clientId={client.id} />
+        </section>
+      </div>
+
+      {weights.length > 0 && (
+        <section className="card">
+          <h2 className="h2">Alle metingen</h2>
+          <MeasurementTable rows={weights} profile={client} />
+        </section>
+      )}
+
       <div className="grid grid-2">
         <section className="card">
           <h2 className="h2">Laatste trainingen</h2>
           <RecentWorkouts workouts={recent} />
         </section>
-        <WeightCard weights={weights} />
+        <section className="card">
+          <h2 className="h2">Lichaam (voor referentiewaarden)</h2>
+          <BodyProfileForm profile={client} />
+        </section>
       </div>
 
       <div className="grid grid-2">
-        <section className="card">
-          <h2 className="h2">Gewicht invoeren</h2>
-          <WeightForm clientId={client.id} />
-        </section>
         <section className="card">
           <h2 className="h2">Gegevens</h2>
           <ActionForm action={updateClient} submitLabel="Opslaan" submitClass="btn">

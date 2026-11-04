@@ -24,6 +24,10 @@ export const users = pgTable("users", {
   goal: text("goal"),
   /** Herkomst van een cliënt: doorgestroomd vanuit de fysiotherapie of van buiten. */
   source: text("source", { enum: ["fysio", "extern"] }),
+  /** Voor referentiewaarden bij metingen. */
+  sex: text("sex", { enum: ["m", "v"] }),
+  birthYear: integer("birth_year"),
+  heightCm: doublePrecision("height_cm"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -123,7 +127,17 @@ export const bodyWeights = pgTable(
     id: serial("id").primaryKey(),
     clientId: integer("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
-    weightKg: doublePrecision("weight_kg").notNull(),
+    weightKg: doublePrecision("weight_kg"),
+    bmi: doublePrecision("bmi"),
+    fatPct: doublePrecision("fat_pct"),
+    visceralFat: doublePrecision("visceral_fat"),
+    muscleKg: doublePrecision("muscle_kg"),
+    boneKg: doublePrecision("bone_kg"),
+    waterPct: doublePrecision("water_pct"),
+    bmr: integer("bmr"),
+    metabolicAge: integer("metabolic_age"),
+    waistCm: doublePrecision("waist_cm"),
+    hipCm: doublePrecision("hip_cm"),
     note: text("note"),
   },
   (t) => [uniqueIndex("body_weights_client_date_uq").on(t.clientId, t.date)],
