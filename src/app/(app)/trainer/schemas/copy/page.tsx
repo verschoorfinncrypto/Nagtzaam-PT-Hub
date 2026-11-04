@@ -2,25 +2,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { copyProgram } from "@/lib/actions";
-import { requireClientAccess, requireUser } from "@/lib/auth";
+import { requireProgramAccess, requireUser } from "@/lib/auth";
 import { getProgramById, getTrainerPrograms } from "@/lib/data";
 import { PROGRAM_LIMITS } from "@/lib/limits";
 
 export const metadata = { title: "Schema kopiëren" };
 
-export default async function CopySchemaPage({ searchParams }: { searchParams: { from?: string } }) {
+export default async function CopySchemaPage({ searchParams }: { searchParams: { from?: string; pre?: string } }) {
+  const pre = new Set((searchParams.pre ?? "").split(",").map(Number).filter(Boolean));
   const me = await requireUser("trainer");
   const program = await getProgramById(Number(searchParams.from));
   if (!program) notFound();
-  const { client: source } = await requireClientAccess(program.clientId);
-  const all = (await getTrainerPrograms("all")).filter((c) => c.client_id !== source.id);
+  const { client: source } = await requireProgramAccess(program);
+  const all = (await getTrainerPrograms("all")).filter((c) => c.client_id !== source?.id);
   const mine = all.filter((c) => c.trainer_id === me.id);
   const others = all.filter((c) => c.trainer_id !== me.id);
   const exerciseCount = program.days.reduce((n, d) => n + d.items.length, 0);
 
   const Row = ({ c }: { c: (typeof all)[number] }) => (
     <label className="copy-row">
-      <input type="checkbox" name="clientId" value={c.client_id} />
+      <input type="checkbox" name="clientId" value={c.client_id} defaultChecked={pre.has(c.client_id)} />
       <span>
         <b>{c.client_name}</b>
         {c.trainer_id !== me.id && <span className="muted"> · {c.trainer_name ?? "nog niet gekoppeld"}</span>}
@@ -39,7 +40,7 @@ export default async function CopySchemaPage({ searchParams }: { searchParams: {
           <Link href="/trainer/schemas?trainer=all" className="body-sm">← Schema&apos;s</Link>
           <h1 className="h1">Schema kopiëren</h1>
           <p className="muted">
-            &quot;{program.name}&quot; van {source.name} · {program.days.length} {program.days.length === 1 ? "dag" : "dagen"} · {exerciseCount} oefeningen
+            &quot;{program.name}&quot; {source ? <>van {source.name}</> : "(groepsschema)"} · {program.days.length} {program.days.length === 1 ? "dag" : "dagen"} · {exerciseCount} oefeningen
           </p>
         </div>
         <Link href={`/trainer/schemas/new?from=${program.id}`} className="btn">Eerst aanpassen voor één cliënt</Link>

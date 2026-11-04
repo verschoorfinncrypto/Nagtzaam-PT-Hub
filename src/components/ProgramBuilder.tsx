@@ -138,6 +138,7 @@ export function ProgramBuilder({
   initial,
   activeByClient,
   returnTo,
+  group,
 }: {
   clients: { id: number; name: string; trainerId: number | null; trainerName: string | null }[];
   meId: number;
@@ -148,6 +149,8 @@ export function ProgramBuilder({
   /** Naam van het actieve schema per cliënt, om te waarschuwen dat het wordt vervangen. */
   activeByClient: Record<number, string>;
   returnTo?: "schemas";
+  /** Groepsschema i.p.v. cliëntschema: geen cliëntkeuze. */
+  group?: { id: number; name: string };
 }) {
   const [exercises, setExercises] = useState(initialExercises);
   const [client, setClient] = useState<number | "">(clientId ?? "");
@@ -208,9 +211,16 @@ export function ProgramBuilder({
       <input type="hidden" name="clientId" value={client} />
       <input type="hidden" name="payload" value={payload} />
       {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
+      {group && <input type="hidden" name="groupId" value={group.id} />}
 
       <section className="card">
         <div className="field-row">
+          {group ? (
+            <div className="field">
+              <span className="label">Groep</span>
+              <p className="h2">{group.name}</p>
+            </div>
+          ) : (
           <label className="field">
             <span className="label">Cliënt</span>
             <select value={client} onChange={(e) => setClient(e.target.value ? Number(e.target.value) : "")} required>
@@ -227,12 +237,13 @@ export function ProgramBuilder({
               </optgroup>
             </select>
           </label>
+          )}
           <label className="field">
             <span className="label">Naam van het schema</span>
             <input name="name" defaultValue={initial?.name ?? ""} placeholder="Bijv. Opbouw knie, blok 1" required maxLength={120} />
           </label>
         </div>
-        {clientName && (
+        {!group && clientName && (
           <p className="hint">
             Schema voor <b>{clientName}</b>.{" "}
             {replaces ? (
@@ -378,7 +389,11 @@ export function ProgramBuilder({
       {state.error && <p className="error" role="alert">{state.error}</p>}
       <div className="actions">
         <Submit />
-        <span className="hint">Het vorige actieve schema van deze cliënt wordt gearchiveerd; gelogde trainingen blijven bewaard.</span>
+        <span className="hint">
+          {group
+            ? "Dit wordt het groepsschema. Daarna kun je het in één keer bij alle leden zetten."
+            : "Het vorige actieve schema van deze cliënt wordt gearchiveerd; gelogde trainingen blijven bewaard."}
+        </span>
       </div>
     </form>
   );

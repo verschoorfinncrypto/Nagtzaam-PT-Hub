@@ -11,6 +11,8 @@ import {
   bodyWeights,
   db,
   exercises,
+  groupMembers,
+  groups,
   programDays,
   programExercises,
   programs,
@@ -27,6 +29,7 @@ import {
   NO_LOGIN,
   requireAdmin,
   requireClientAccess,
+  requireProgramAccess,
   requireUser,
   startSession,
   viewingTrainer,
@@ -441,22 +444,33 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
   } catch {
     return { error: "Kon het schema niet lezen." };
   }
+  const groupId = Number(form.get("groupId")) || null;
   const parsed = programSchema.safeParse({
-    clientId: form.get("clientId"),
+    clientId: groupId ? 1 : form.get("clientId"), // bij een groepsschema telt de cliënt niet
     name: form.get("name"),
     notes: form.get("notes") || undefined,
     days,
   });
   if (!parsed.success) return { error: await programErrorMessage(parsed.error.issues[0], days) };
   const d = parsed.data;
-  const { viewer } = await requireClientAccess(d.clientId);
-  if (viewer.role !== "trainer") return { error: "Alleen je trainer kan schema's maken." };
+  let viewer;
+  if (groupId) {
+    viewer = await requireUser("trainer");
+    const [g] = await db.select({ id: groups.id }).from(groups).where(eq(groups.id, groupId)).limit(1);
+    if (!g) return { error: "Die groep bestaat niet meer." };
+  } else {
+    ({ viewer } = await requireClientAccess(d.clientId));
+    if (viewer.role !== "trainer") return { error: "Alleen je trainer kan schema's maken." };
+  }
 
   await db.transaction(async (tx) => {
-    await tx.update(programs).set({ active: false }).where(and(eq(programs.clientId, d.clientId), eq(programs.active, true)));
+    await tx
+      .update(programs)
+      .set({ active: false })
+      .where(and(groupId ? eq(programs.groupId, groupId) : eq(programs.clientId, d.clientId), eq(programs.active, true)));
     const [p] = await tx
       .insert(programs)
-      .values({ clientId: d.clientId, trainerId: viewer.id, name: d.name, notes: d.notes ?? null, active: true })
+      .values({ clientId: groupId ? null : d.clientId, groupId, trainerId: viewer.id, name: d.name, notes: d.notes ?? null, active: true })
       .returning({ id: programs.id });
     for (const [i, day] of d.days.entries()) {
       const [pd] = await tx.insert(programDays).values({ programId: p.id, name: day.name, position: i }).returning({ id: programDays.id });
@@ -478,6 +492,7 @@ export async function saveProgram(_: FormResult, form: FormData): Promise<FormRe
     }
   });
   revalidatePath("/", "layout");
+  if (groupId) redirect(`/trainer/groups/${groupId}?program=1`);
   if (form.get("returnTo") === "schemas") redirect(`/trainer/schemas?saved=${d.clientId}`);
   redirect(`/trainer/clients/${d.clientId}?program=1`);
 }
@@ -493,7 +508,7 @@ export async function copyProgram(_: FormResult, form: FormData): Promise<FormRe
 
   const [src] = await db.select().from(programs).where(eq(programs.id, fromId)).limit(1);
   if (!src) return { error: "Dat schema bestaat niet meer." };
-  await requireClientAccess(src.clientId);
+  await requireProgramAccess(src);
   const targets = await db
     .select({ id: users.id, name: users.name })
     .from(users)
@@ -546,6 +561,107 @@ export async function stopProgram(form: FormData) {
   if (viewer.role !== "trainer") return;
   await db.update(programs).set({ active: false }).where(and(eq(programs.clientId, clientId), eq(programs.active, true)));
   revalidatePath("/", "layout");
+}
+
+/* ---------- Groepen (trainer) ---------- */
+
+export async function saveGroup(_: FormResult, form: FormData): Promise<FormResult> {
+  const me = await requireUser("trainer");
+  const id = Number(form.get("groupId")) || null;
+  const name = String(form.get("name") ?? "").trim().slice(0, 80);
+  const schedule = String(form.get("schedule") ?? "").trim().slice(0, 60) || null;
+  const notes = String(form.get("notes") ?? "").trim().slice(0, 1000) || null;
+  const trainerRaw = String(form.get("trainerId") ?? "");
+  const memberIds = [...new Set(form.getAll("memberId").map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  if (name.length < 2) return { error: "Geef de groep een naam." };
+  let trainerId: number | null = me.id;
+  if (trainerRaw === "") trainerId = null;
+  else {
+    const [t] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, Number(trainerRaw)), eq(users.role, "trainer"))).limit(1);
+    trainerId = t?.id ?? me.id;
+  }
+  const members = memberIds.length
+    ? await db.select({ id: users.id }).from(users).where(and(inArray(users.id, memberIds), eq(users.role, "client")))
+    : [];
+  const gid = await db.transaction(async (tx) => {
+    let g = id;
+    if (g) {
+      const res = await tx.update(groups).set({ name, schedule, notes, trainerId }).where(eq(groups.id, g)).returning({ id: groups.id });
+      if (!res.length) throw new Error("Groep niet gevonden");
+      await tx.delete(groupMembers).where(eq(groupMembers.groupId, g));
+    } else {
+      const [ng] = await tx.insert(groups).values({ name, schedule, notes, trainerId }).returning({ id: groups.id });
+      g = ng.id;
+    }
+    if (members.length) await tx.insert(groupMembers).values(members.map((m) => ({ groupId: g!, clientId: m.id })));
+    return g!;
+  });
+  revalidatePath("/", "layout");
+  redirect(`/trainer/groups/${gid}?saved=1`);
+}
+
+export async function deleteGroup(form: FormData) {
+  await requireUser("trainer");
+  const id = Number(form.get("groupId"));
+  await db.delete(groups).where(eq(groups.id, id));
+  revalidatePath("/", "layout");
+  redirect("/trainer/groups?deleted=1");
+}
+
+const groupSessionSchema = z.object({
+  groupId: z.coerce.number().int().positive(),
+  dayId: z.coerce.number().int().positive(),
+  date: isoDate,
+  entries: z
+    .array(
+      z.object({
+        clientId: z.number().int().positive(),
+        pain: z.number().int().min(0).max(10).nullable().optional(),
+        exercises: z.array(
+          z.object({ exerciseId: z.number().int().positive(), sets: z.number().int().min(0).max(20), reps: z.number().int().min(0).max(1000), weight: z.number().min(0).max(1000) }),
+        ),
+      }),
+    )
+    .max(60),
+});
+
+/** Groepssessie loggen: per aanwezige een eigen training met zijn sets, zodat PR's en volume per cliënt kloppen. */
+export async function logGroupSession(_: FormResult, form: FormData): Promise<FormResult> {
+  await requireUser("trainer");
+  let entries: unknown;
+  try {
+    entries = JSON.parse(String(form.get("payload") ?? "[]"));
+  } catch {
+    return { error: "Kon de sessie niet lezen." };
+  }
+  const parsed = groupSessionSchema.safeParse({ groupId: form.get("groupId"), dayId: form.get("dayId"), date: form.get("date"), entries });
+  if (!parsed.success) return { error: "Controleer de ingevulde waarden." };
+  const d = parsed.data;
+  if (d.date > today()) return { error: "Een datum in de toekomst kan niet." };
+  const [g] = await db.select().from(groups).where(eq(groups.id, d.groupId)).limit(1);
+  if (!g) return { error: "Die groep bestaat niet meer." };
+  const members = await db.select({ clientId: groupMembers.clientId }).from(groupMembers).where(eq(groupMembers.groupId, g.id));
+  const allowed = new Set(members.map((m) => m.clientId));
+  const present = d.entries.filter((e) => allowed.has(e.clientId));
+  if (!present.length) return { error: "Vink minstens één aanwezige aan." };
+  const [day] = await db.select().from(programDays).where(eq(programDays.id, d.dayId)).limit(1);
+
+  await db.transaction(async (tx) => {
+    for (const e of present) {
+      const [w] = await tx
+        .insert(workouts)
+        .values({ clientId: e.clientId, date: d.date, title: `${g.name}${day ? ` · ${day.name}` : ""}`, pain: e.pain ?? null })
+        .returning({ id: workouts.id });
+      const rows = e.exercises
+        .filter((x) => x.sets > 0 && x.reps > 0)
+        .flatMap((x, position) =>
+          Array.from({ length: x.sets }, (_, i) => ({ workoutId: w.id, exerciseId: x.exerciseId, position, setNumber: i + 1, reps: x.reps, weight: x.weight })),
+        );
+      if (rows.length) await tx.insert(workoutSets).values(rows);
+    }
+  });
+  revalidatePath("/", "layout");
+  redirect(`/trainer/groups/${g.id}?logged=${present.length}`);
 }
 
 /* ---------- Oefeningen (trainer) ---------- */

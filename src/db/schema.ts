@@ -5,6 +5,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -51,11 +52,32 @@ export const exercises = pgTable("exercises", {
   builtIn: boolean("built_in").notNull().default(false),
 });
 
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  /** Vast moment, vrije tekst, bijv. "di 18:00". */
+  schedule: text("schedule"),
+  trainerId: integer("trainer_id").references(() => users.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const groupMembers = pgTable(
+  "group_members",
+  {
+    groupId: integer("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+    clientId: integer("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.clientId] })],
+);
+
 export const programs = pgTable(
   "programs",
   {
     id: serial("id").primaryKey(),
-    clientId: integer("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** Schema van een cliënt, of (bij groupId) het groepsschema zonder cliënt. */
+    clientId: integer("client_id").references(() => users.id, { onDelete: "cascade" }),
+    groupId: integer("group_id").references((): AnyPgColumn => groups.id, { onDelete: "cascade" }),
     trainerId: integer("trainer_id").references(() => users.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     notes: text("notes"),

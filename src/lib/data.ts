@@ -5,6 +5,8 @@ import {
   bodyWeights,
   db,
   exercises,
+  groupMembers,
+  groups,
   programDays,
   programExercises,
   programs,
@@ -416,4 +418,54 @@ export async function getCheckins(clientId: number, limit = 20) {
     .orderBy(desc(workouts.date), desc(workouts.id))
     .limit(limit);
   return rows.reverse();
+}
+
+/* ---------- Groepen ---------- */
+
+export async function getGroups() {
+  const r = await db.execute(sql`
+    select g.id, g.name, g.schedule, g.trainer_id, t.name as trainer_name,
+           (select count(*) from group_members m where m.group_id = g.id)::int as members,
+           (select p.name from programs p where p.group_id = g.id and p.active order by p.created_at desc limit 1) as program_name,
+           (select max(w.date)::text from workouts w join group_members m on m.client_id = w.client_id
+              where m.group_id = g.id and w.title like g.name || '%') as last_session
+    from groups g left join users t on t.id = g.trainer_id
+    order by g.name`);
+  return r.rows as {
+    id: number;
+    name: string;
+    schedule: string | null;
+    trainer_id: number | null;
+    trainer_name: string | null;
+    members: number;
+    program_name: string | null;
+    last_session: string | null;
+  }[];
+}
+
+export async function getGroup(id: number) {
+  const [g] = await db.select().from(groups).where(eq(groups.id, id)).limit(1);
+  if (!g) return null;
+  const members = await db
+    .select({ id: users.id, name: users.name, trainerId: users.trainerId })
+    .from(groupMembers)
+    .innerJoin(users, eq(users.id, groupMembers.clientId))
+    .where(eq(groupMembers.groupId, id))
+    .orderBy(asc(users.name));
+  const [p] = await db
+    .select()
+    .from(programs)
+    .where(and(eq(programs.groupId, id), eq(programs.active, true)))
+    .orderBy(desc(programs.createdAt))
+    .limit(1);
+  return { ...g, members, program: p ? await withDays(p) : null };
+}
+
+export async function getGroupsOfClient(clientId: number) {
+  return db
+    .select({ id: groups.id, name: groups.name, schedule: groups.schedule })
+    .from(groupMembers)
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(eq(groupMembers.clientId, clientId))
+    .orderBy(asc(groups.name));
 }

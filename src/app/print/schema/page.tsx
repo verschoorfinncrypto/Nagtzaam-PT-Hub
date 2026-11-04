@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireClientAccess, requireUser } from "@/lib/auth";
-import { getActiveProgram } from "@/lib/data";
+import { getActiveProgram, getGroup } from "@/lib/data";
 import { longDate, today } from "@/lib/format";
 import { SECTION_LABEL, type Section } from "@/lib/sections";
 import { PrintButton } from "./PrintButton";
@@ -10,13 +10,25 @@ export const metadata = { title: "Schema printen" };
 export const dynamic = "force-dynamic";
 
 /** Printvriendelijk schema (A4), voor de cliënt zelf of voor een trainer (?client=). */
-export default async function PrintSchemaPage({ searchParams }: { searchParams: { client?: string } }) {
+export default async function PrintSchemaPage({ searchParams }: { searchParams: { client?: string; group?: string } }) {
   const me = await requireUser();
-  const clientId = me.role === "trainer" ? Number(searchParams.client) : me.id;
-  const { client } = await requireClientAccess(clientId);
-  const program = await getActiveProgram(client.id);
+  let who: string;
+  let program;
+  let back: string;
+  if (me.role === "trainer" && searchParams.group) {
+    const g = await getGroup(Number(searchParams.group));
+    if (!g) notFound();
+    who = g.name;
+    program = g.program;
+    back = `/trainer/groups/${g.id}`;
+  } else {
+    const clientId = me.role === "trainer" ? Number(searchParams.client) : me.id;
+    const { client } = await requireClientAccess(clientId);
+    who = client.name;
+    program = await getActiveProgram(client.id);
+    back = me.role === "trainer" ? `/trainer/clients/${client.id}` : "/schema";
+  }
   if (!program) notFound();
-  const back = me.role === "trainer" ? `/trainer/clients/${client.id}` : "/schema";
 
   return (
     <main className="print-page">
@@ -32,7 +44,7 @@ export default async function PrintSchemaPage({ searchParams }: { searchParams: 
         <div>
           <h1>{program.name}</h1>
           <p>
-            {client.name} · {longDate(today())}
+            {who} · {longDate(today())}
           </p>
         </div>
       </header>

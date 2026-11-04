@@ -349,3 +349,7 @@ table.builder td { padding-right: 8px; }
 .measure-item { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); align-content: start; }
 .measure-marker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
 .dot-alert { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--alert); margin-left: 6px; vertical-align: middle; }
+
+/* Groepen */
+.attendance { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.group-grid td { vertical-align: middle; }

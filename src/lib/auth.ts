@@ -96,3 +96,10 @@ export async function requireClientAccess(clientId: number) {
   if (!c) notFound();
   return { viewer: u, client: c };
 }
+
+/** Toegang tot een schema: dat van een cliënt (zie requireClientAccess) of een groepsschema (alleen trainers). */
+export async function requireProgramAccess(program: { clientId: number | null }) {
+  if (program.clientId != null) return requireClientAccess(program.clientId);
+  const viewer = await requireUser("trainer");
+  return { viewer, client: null };
+}

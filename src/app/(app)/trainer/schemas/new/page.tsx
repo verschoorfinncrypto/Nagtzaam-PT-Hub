@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProgramBuilder, type ProgramInit } from "@/components/ProgramBuilder";
-import { requireClientAccess, requireUser } from "@/lib/auth";
+import { requireClientAccess, requireProgramAccess, requireUser } from "@/lib/auth";
 import { getActiveProgram, getExerciseFacets, getExerciseOptions, getProgramById, getTrainerPrograms } from "@/lib/data";
 
 export const metadata = { title: "Schema bouwen" };
@@ -16,7 +16,7 @@ export default async function NewSchemaPage({ searchParams }: { searchParams: { 
     // ?from= : een bestaand schema als startpunt (bijv. om het voor een andere cliënt aan te passen)
     searchParams.from ? getProgramById(Number(searchParams.from)) : clientId ? getActiveProgram(clientId) : Promise.resolve(null),
   ]);
-  if (searchParams.from && program) await requireClientAccess(program.clientId);
+  if (searchParams.from && program) await requireProgramAccess(program);
   const fromTemplate = !!searchParams.from && !!program;
   const clients = programs
     .map((p) => ({ id: p.client_id, name: p.client_name, trainerId: p.trainer_id, trainerName: p.trainer_name }))
